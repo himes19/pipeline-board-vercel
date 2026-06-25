@@ -8,7 +8,7 @@
 //   tipo_cliente_score    peso 45%  → igual
 //   deal_score = round(suma_ponderada * 100, 1)
 
-const { queryDB, executeDB } = require('../../lib/db');
+const { queryDB, executeDB } = require('../lib/db');
 
 const FIELD_DEAL_SCORE = '38b24a2e-c656-45f3-aa0f-bed6ca2f5b56';
 const FIELD_DEAL_NAME  = 'aa797617-3ac4-4469-af73-cb4233c2d689';
