@@ -3,7 +3,7 @@ const { getSession, handleCors } = require('../lib/auth');
 const { queryDB, executeDB } = require('../lib/db');
 const { DEAL_FIELD_MAP, STAGE_STATUS_MAP, STAGE_FIELD_ID } = require('../lib/utils');
 
-const STAGE_CHANGED_AT_FIELD = '55946434-2043-40cf-8cd2-75c285d6386d';
+const STAGE_CHANGED_AT_FIELD = '763c5085-b381-4646-a461-82c328523024';
 
 module.exports = async function handler(req, res) {
   if (handleCors(req, res)) return;
