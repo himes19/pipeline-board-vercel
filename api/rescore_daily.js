@@ -1,10 +1,10 @@
 const { queryDB, executeDB } = require('../lib/db');
 
-const FIELD_DEAL_SCORE  = '38b24a2e-c656-45f3-aa0f-bed6ca2f5b56';
-const FIELD_DEAL_NAME   = 'aa797617-3ac4-4469-af73-cb4233c2d689';
-const FIELD_TEMPERATURA = 'f457c08e-50c2-4c98-973a-fa1fd52f905c';
-const FIELD_STAGE_CHANGED_AT = '55946434-2043-40cf-8cd2-75c285d6386d';
-const OBJECT_DEAL       = 'e9f17fa1-bdd2-4bcc-9798-458ae301ec2c';
+const FIELD_DEAL_SCORE       = '38b24a2e-c656-45f3-aa0f-bed6ca2f5b56';
+const FIELD_DEAL_NAME        = 'aa797617-3ac4-4469-af73-cb4233c2d689';
+const FIELD_TEMPERATURA      = 'f457c08e-50c2-4c98-973a-fa1fd52f905c';
+const FIELD_STAGE_CHANGE     = '763c5085-b381-4646-a461-82c328523024';
+const OBJECT_DEAL            = 'e9f17fa1-bdd2-4bcc-9798-458ae301ec2c';
 
 const PESOS  = { nc: 0.10, ep: 0.15, sbc: 0.30, tc: 0.45 };
 const TO_PCT = { '1': 33.33, '2': 66.67, '3': 100.0 };
@@ -23,9 +23,9 @@ function calcScore(nc, ep, sbc, tc) {
   return Math.round((total / pesoAcum) * 100 * 10) / 10;
 }
 
-function calcTemperatura(stageChangedAt) {
-  if (!stageChangedAt) return 'Frío';
-  const changed = new Date(stageChangedAt);
+function calcTemperatura(stageChangeDate) {
+  if (!stageChangeDate) return 'Frío';
+  const changed = new Date(stageChangeDate);
   const now = new Date();
   const dias = Math.floor((now - changed) / (1000 * 60 * 60 * 24));
   if (dias <= 7)  return 'Caliente';
@@ -56,14 +56,14 @@ module.exports = async function handler(req, res) {
 
     const rows = await queryDB(`
       SELECT
-        e.id                       AS entry_id,
+        e.id                   AS entry_id,
         d.deal_name,
         d.stage,
-        d.nivel_contacto_score     AS nc,
-        d.etapa_proceso_score      AS ep,
-        d.solidez_bc_score         AS sbc,
-        d.tipo_cliente_score       AS tc,
-        d.stage_changed_at
+        d.nivel_contacto_score AS nc,
+        d.etapa_proceso_score  AS ep,
+        d.solidez_bc_score     AS sbc,
+        d.tipo_cliente_score   AS tc,
+        d.stage_change_date
       FROM deals d
       JOIN entries e ON e.object_id = '${OBJECT_DEAL}'
       JOIN entry_fields ef_name
@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
     const resultados = [];
 
     for (const row of rows) {
-      // Calcular y guardar deal_score
+      // Deal score
       const score = calcScore(row.nc, row.ep, row.sbc, row.tc);
       if (score !== null) {
         await upsertField(row.entry_id, FIELD_DEAL_SCORE, String(score));
@@ -87,14 +87,14 @@ module.exports = async function handler(req, res) {
         sinScore++;
       }
 
-      // Calcular y guardar temperatura
-      const temp = calcTemperatura(row.stage_changed_at);
+      // Temperatura
+      const temp = calcTemperatura(row.stage_change_date);
       await upsertField(row.entry_id, FIELD_TEMPERATURA, temp);
       temps_actualizadas++;
     }
 
     resultados.sort((a, b) => b.score - a.score);
-    console.log(`[rescore_daily] ✓ scores: ${scores_actualizados} | temps: ${temps_actualizadas} | sin_score: ${sinScore}`);
+    console.log(`[rescore_daily] scores:${scores_actualizados} temps:${temps_actualizadas} sin_score:${sinScore}`);
 
     return res.status(200).json({
       ok: true,
