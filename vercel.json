@@ -17,9 +17,8 @@
     }
   ],
   "crons": [
-    {
-      "path": "/api/rescore_daily",
-      "schedule": "0 4 * * *"
-    }
+    { "path": "/api/rescore_daily",    "schedule": "0 4 * * *"   },
+    { "path": "/api/snapshot_weekly",  "schedule": "0 4 * * 4"   },
+    { "path": "/api/weekly_report",    "schedule": "30 4 * * 4"  }
   ]
 }
