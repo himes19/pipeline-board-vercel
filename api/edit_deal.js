@@ -5,21 +5,38 @@ const { DEAL_FIELD_MAP, STAGE_STATUS_MAP, STAGE_FIELD_ID } = require('../lib/uti
 
 const STAGE_CHANGED_AT_FIELD = '763c5085-b381-4646-a461-82c328523024';
 
+// Mapeo stage → phase para deal_movements
+const STAGE_TO_PHASE = {
+  '1 · Discovery Call':                   'Discovery',
+  '2 · Propuesta Preliminar':             'Propuesta',
+  '3 · Reunión con Producción':           'Análisis',
+  '4 · Reunión con Calidad':              'Análisis',
+  '5 · Reunión con Finanzas':             'Análisis',
+  '6 · Reunión Técnica / Pre-Ingeniería': 'Ingeniería',
+  '7 · Desarrollo del Business Case':     'Business Case',
+  '8 · Presentación Ejecutiva':           'Cierre',
+  '0 · Perdido':                          'Perdido',
+  '13 · Ganado':                          'Ganado',
+};
+
 module.exports = async function handler(req, res) {
   if (handleCors(req, res)) return;
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method Not Allowed' }); return; }
   const session = getSession(req);
   if (!session) { res.status(401).json({ error: 'No autorizado' }); return; }
+
   try {
     const { deal_name, field, value } = req.body || {};
     if (!deal_name || !field || value === undefined) {
       res.status(400).json({ error: 'deal_name, field, and value required' }); return;
     }
     const safeDealName = deal_name.replace(/'/g, "''");
-    const safeValue = String(value).replace(/'/g, "''");
+    const safeValue    = String(value).replace(/'/g, "''");
 
     const entryRows = await queryDB(
-      `SELECT ef.entry_id as id FROM entry_fields ef JOIN fields f ON f.id = ef.field_id AND f.name = 'Deal Name' WHERE ef.value = '${safeDealName}' LIMIT 1`
+      `SELECT ef.entry_id as id FROM entry_fields ef
+       JOIN fields f ON f.id = ef.field_id AND f.name = 'Deal Name'
+       WHERE ef.value = '${safeDealName}' LIMIT 1`
     );
     if (!entryRows || entryRows.length === 0) {
       res.status(404).json({ error: 'Deal not found: ' + deal_name }); return;
@@ -30,6 +47,20 @@ module.exports = async function handler(req, res) {
       if (!STAGE_STATUS_MAP[value]) {
         res.status(400).json({ error: 'Unknown stage: ' + value }); return;
       }
+
+      // Obtener stage actual antes de cambiar
+      const currentStageRows = await queryDB(
+        `SELECT value FROM entry_fields WHERE entry_id = '${entryId}' AND field_id = '${STAGE_FIELD_ID}' LIMIT 1`
+      );
+      const fromStage = currentStageRows?.[0]?.value || null;
+
+      // Obtener vendedor y valor del deal
+      const dealInfo = await queryDB(
+        `SELECT assigned_to, CAST(deal_value_usd AS DOUBLE PRECISION) as deal_value_usd FROM deals WHERE deal_name = '${safeDealName}' LIMIT 1`
+      );
+      const vendedor  = dealInfo?.[0]?.assigned_to || session.name || null;
+      const dealValue = dealInfo?.[0]?.deal_value_usd || 0;
+
       // Actualizar stage
       const existing = await queryDB(
         `SELECT id FROM entry_fields WHERE entry_id = '${entryId}' AND field_id = '${STAGE_FIELD_ID}' LIMIT 1`
@@ -39,7 +70,8 @@ module.exports = async function handler(req, res) {
       } else {
         await executeDB(`INSERT INTO entry_fields (id, entry_id, field_id, value) VALUES ('${crypto.randomUUID()}', '${entryId}', '${STAGE_FIELD_ID}', '${safeValue}')`);
       }
-      // Actualizar stage_changed_at automáticamente
+
+      // Actualizar stage_changed_at
       const now = new Date().toISOString();
       const existingTs = await queryDB(
         `SELECT id FROM entry_fields WHERE entry_id = '${entryId}' AND field_id = '${STAGE_CHANGED_AT_FIELD}' LIMIT 1`
@@ -49,6 +81,28 @@ module.exports = async function handler(req, res) {
       } else {
         await executeDB(`INSERT INTO entry_fields (id, entry_id, field_id, value) VALUES ('${crypto.randomUUID()}', '${entryId}', '${STAGE_CHANGED_AT_FIELD}', '${now}')`);
       }
+
+      // Registrar en deal_movements
+      const fromPhase = STAGE_TO_PHASE[fromStage] || null;
+      const toPhase   = STAGE_TO_PHASE[value] || null;
+      const safeFrom  = fromStage ? `'${fromStage.replace(/'/g,"''")}'` : 'NULL';
+      const safeTo    = value.replace(/'/g,"''");
+      const safeFromP = fromPhase ? `'${fromPhase}'` : 'NULL';
+      const safeToP   = toPhase   ? `'${toPhase}'`   : 'NULL';
+      const safeVend  = vendedor  ? `'${vendedor.replace(/'/g,"''")}'` : 'NULL';
+
+      await executeDB(`
+        INSERT INTO deal_movements 
+          (id, deal_id, deal_name, timestamp, movement_type, from_stage, to_stage, from_phase, to_phase, vendedor, deal_value_usd)
+        VALUES (
+          '${crypto.randomUUID()}', '${entryId}', '${safeDealName}',
+          NOW(), 'stage_change',
+          ${safeFrom}, '${safeTo}',
+          ${safeFromP}, ${safeToP},
+          ${safeVend}, ${dealValue}
+        )
+      `);
+
       res.status(200).json({ ok: true, deal_name, field, value }); return;
     }
 
@@ -70,6 +124,7 @@ module.exports = async function handler(req, res) {
       await executeDB(`INSERT INTO entry_fields (id, entry_id, field_id, value) VALUES ('${crypto.randomUUID()}', '${entryId}', '${fieldId}', '${safeValue}')`);
     }
     res.status(200).json({ ok: true, deal_name, field, value });
+
   } catch (e) {
     res.status(500).json({ error: 'Server error: ' + e.message });
   }
