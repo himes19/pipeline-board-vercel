@@ -1,11 +1,21 @@
 const { USERS, signToken, handleCors } = require('../lib/auth');
+
 module.exports = async function handler(req, res) {
   if (handleCors(req, res)) return;
   if (req.method !== 'POST') { res.status(405).json({ error: 'Method Not Allowed' }); return; }
+
+  // Logout — solo limpiar sesión del lado cliente
+  if (req.path === '/api/logout' || req.body?.action === 'logout') {
+    return res.status(200).json({ ok: true });
+  }
+
+  // Login
   try {
     const { username, password } = req.body || {};
     const user = USERS[username];
-    if (!user || user.password !== password) { res.status(401).json({ error: 'Usuario o contraseña incorrectos' }); return; }
+    if (!user || user.password !== password) {
+      res.status(401).json({ error: 'Usuario o contraseña incorrectos' }); return;
+    }
     const payload = { username, name: user.name, role: user.role, seller: user.seller };
     const token = signToken(payload);
     res.status(200).json({ token, name: user.name, role: user.role, seller: user.seller });
