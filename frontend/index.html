@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>⚡ PulseVolt — Deal Editor</title>
+<style>
+/* ── Base ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-dark:#0F6E56;--green-light:rgba(29,158,117,0.12);
+  --red:#dc2626;--red-light:rgba(220,38,38,0.12);
+  --amber:#f59e0b;--blue:#60a5fa;--purple:#818cf8;
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--surface3:#2a2f45;
+  --border:rgba(255,255,255,0.08);--border-md:rgba(255,255,255,0.14);
+  --text:#e8eaf0;--muted:#8b90a8;--faint:#555b76;
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --font:'Inter',system-ui,sans-serif;--font-mono:'JetBrains Mono','Fira Mono',monospace;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+a{color:var(--green);text-decoration:none}
+button,input,select,textarea{font-family:var(--font)}
+
+/* ── Login ── */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 0%,rgba(29,158,117,0.08) 0%,transparent 60%)}
+.login-card{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--radius-xl);padding:2.5rem;width:340px;box-shadow:var(--shadow)}
+.login-brand{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-0.5px}
+.login-brand span{color:var(--green)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:2rem}
+.login-card input{width:100%;background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:10px 14px;font-size:14px;color:var(--text);margin-bottom:12px;transition:border-color .15s}
+.login-card input:focus{outline:none;border-color:var(--green)}
+.login-err{font-size:12px;color:var(--red);min-height:18px;margin-bottom:8px}
+.btn-login{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:11px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-login:hover{background:var(--green-dark)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── App shell ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:80}
+.topbar-logo{font-size:14px;font-weight:700;letter-spacing:-0.3px}
+.topbar-logo span{color:var(--green)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-user{font-size:12px;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.btn-sm{font-size:12px;padding:5px 12px;border-radius:var(--radius);border:1px solid var(--border-md);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.btn-sm:hover{background:var(--surface2);color:var(--text)}
+.sync-chip{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;transition:background .3s}
+.sync-dot.err{background:var(--red)}
+.sync-dot.busy{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Stats ── */
+.stats-row{display:flex;gap:10px;padding:14px 20px;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--surface)}
+.stat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;flex-shrink:0}
+.stat-label{font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:700;font-family:var(--font-mono);letter-spacing:-0.5px}
+.stat-val.g{color:var(--green)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.toolbar-search{flex:1;max-width:280px;position:relative}
+.toolbar-search input{width:100%;background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:8px 12px 8px 34px;font-size:13px;color:var(--text)}
+.toolbar-search input:focus{outline:none;border-color:var(--green)}
+.toolbar-search .ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.sel{background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:7px 10px;font-size:13px;color:var(--text);cursor:pointer;appearance:none;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238b90a8' d='M5 7L0 2h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.sel:focus{outline:none;border-color:var(--green)}
+.btn-new{display:flex;align-items:center;gap:6px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;margin-left:auto}
+.btn-new:hover{background:var(--green-dark)}
+.btn-refresh{background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:8px 10px;font-size:14px;cursor:pointer;color:var(--muted);transition:all .15s;line-height:1}
+.btn-refresh:hover{color:var(--text);background:var(--surface3)}
+
+/* ── Kanban Board ── */
+.board-wrap{flex:1;overflow-x:auto;padding:16px 20px 32px}
+.board{display:flex;gap:12px;min-width:max-content;align-items:flex-start}
+.col{width:230px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column}
+.col-head{padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.col-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-cnt{font-size:10px;font-family:var(--font-mono);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 6px;color:var(--muted);flex-shrink:0}
+.col-body{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:60px}
+.col-body.drag-over{background:var(--green-light);border-radius:var(--radius)}
+
+/* ── Card ── */
+.card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 11px;cursor:grab;transition:border-color .12s,box-shadow .12s;animation:fadeUp .15s ease-out;position:relative}
+.card:hover{border-color:var(--border-md)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.card.dragging{opacity:.3;cursor:grabbing}
+.card-name{font-size:13px;font-weight:600;margin-bottom:2px;padding-right:22px;line-height:1.3}
+.card-company{font-size:11px;color:var(--muted);margin-bottom:7px}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.card-val{font-size:12px;font-weight:700;font-family:var(--font-mono);color:var(--green)}
+.card-badge{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px}
+.badge-muy-alta{background:rgba(220,38,38,.2);color:#f87171}
+.badge-alta{background:rgba(245,158,11,.2);color:#fbbf24}
+.badge-medio{background:rgba(96,165,250,.2);color:#93c5fd}
+.badge-baja{background:rgba(139,144,168,.15);color:#8b90a8}
+.card-followup{font-size:10px;color:var(--muted)}
+.card-followup.overdue{color:#f87171}
+.card-followup.today{color:var(--amber)}
+.card-edit{position:absolute;top:7px;right:7px;background:none;border:none;cursor:pointer;font-size:14px;color:var(--faint);line-height:1;padding:2px;border-radius:3px}
+.card-edit:hover{color:var(--text);background:var(--surface3)}
+.card-agent{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;margin-top:4px;display:inline-block}
+.card-levels{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}.card-score{font-size:11px;font-weight:700;font-family:var(--font-mono);padding:2px 6px;border-radius:4px;background:var(--surface3);color:var(--text)}
+.level-dot{font-size:10px;color:var(--green);letter-spacing:1px;cursor:default}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-start;justify-content:center;z-index:300;padding:20px;overflow-y:auto}
+.overlay{display:none}
+.modal{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--radius-xl);width:100%;max-width:580px;box-shadow:var(--shadow);margin:auto;animation:modalIn .2s ease-out}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted);padding:2px;border-radius:4px;line-height:1}
+.modal-close:hover{color:var(--text);background:var(--surface2)}
+.modal-body{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+.form-group label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:9px 12px;font-size:13px;color:var(--text);transition:border-color .15s;appearance:none}
+.form-group select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238b90a8' d='M5 7L0 2h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--green)}
+.form-group textarea{resize:vertical;min-height:72px;line-height:1.5}
+.modal-foot{display:flex;gap:8px;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border)}
+.btn-danger{background:none;border:1px solid var(--border-md);border-radius:var(--radius);padding:8px 14px;font-size:13px;font-weight:500;color:var(--red);cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:var(--red-light);border-color:var(--red)}
+.modal-foot-right{display:flex;gap:8px}
+.btn-cancel{background:none;border:1px solid var(--border-md);border-radius:var(--radius);padding:8px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
+.btn-cancel:hover{background:var(--surface2);color:var(--text)}
+.btn-save{background:var(--green);border:none;border-radius:var(--radius);padding:8px 20px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:var(--green-dark)}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border-md);border-radius:100px;padding:9px 20px;font-size:13px;font-weight:500;box-shadow:var(--shadow);display:none;z-index:999;white-space:nowrap}
+.toast.ok{color:var(--green)}
+.toast.err{color:var(--red)}
+
+/* ── Empty ── */
+.empty-col{text-align:center;padding:18px 10px;color:var(--faint);font-size:11px;border:1px dashed var(--border);border-radius:var(--radius);margin:2px}
+.loading-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+
+/* ── Section divider in modal ── */
+.modal-section{grid-column:1/-1;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint)}
+
+.view-toggle{display:flex;gap:4px;background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:3px}
+.view-toggle button{background:none;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:14px;color:var(--muted);line-height:1}
+.view-toggle button.active{background:var(--surface3);color:var(--text)}
+.table-wrap{flex:1;overflow:auto;padding:16px 20px 32px}
+.deals-table{width:100%;border-collapse:collapse;font-size:13px}
+.deals-table th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--border-md);color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;cursor:pointer;user-select:none}
+.deals-table th:hover{color:var(--text)}
+.deals-table th .sort-icon{margin-left:4px;opacity:.4}
+.deals-table th.sorted .sort-icon{opacity:1;color:var(--green)}
+.deals-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.deals-table tr:hover td{background:var(--surface2)}
+.deals-table tr.clickable{cursor:pointer}
+.score-pill{display:inline-block;font-size:11px;font-weight:700;font-family:var(--font-mono);padding:2px 7px;border-radius:10px;min-width:42px;text-align:center}
+.score-high{background:#16a34a22;color:#4ade80}
+.score-mid{background:#ca8a0422;color:#fbbf24}
+.score-low{background:#dc262622;color:#f87171}
+.score-none{background:var(--surface3);color:var(--muted)}
+.tbl-stage{font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl-val{font-size:12px;font-weight:700;font-family:var(--font-mono);color:var(--green)}
+.tbl-agent{font-size:11px;font-weight:700;padding:2px 5px;border-radius:3px}
+.tbl-dots{display:flex;gap:4px}
+
+.temp-badge{font-size:14px;cursor:default}
+
+.myday-wrap{background:var(--surface2);border-bottom:1px solid var(--border-md);padding:0 20px}
+.myday-header{display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;user-select:none}
+.myday-header h3{font-size:13px;font-weight:600;color:var(--text);margin:0}
+.myday-toggle{font-size:11px;color:var(--muted);margin-left:auto}
+.myday-body{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-bottom:12px}
+.myday-col{background:var(--surface3);border-radius:var(--radius);padding:10px;min-width:0}
+.myday-col-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.myday-col-title span{background:var(--surface2);border-radius:8px;padding:1px 6px;font-size:10px}
+.myday-item{font-size:12px;padding:4px 6px;border-radius:4px;cursor:pointer;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .15s}
+.myday-item:hover{background:var(--surface2)}
+.myday-item .myday-sub{font-size:10px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.myday-empty{font-size:11px;color:var(--muted);padding:4px 6px;font-style:italic}
+.myday-col.col-late .myday-col-title{color:#f87171}
+.myday-col.col-today .myday-col-title{color:#fbbf24}
+.myday-col.col-tomorrow .myday-col-title{color:#60a5fa}
+.myday-col.col-yesterday .myday-col-title{color:#4ade80}
+.myday-more{font-size:10px;color:var(--muted);padding:2px 6px;cursor:pointer}
+.myday-more:hover{color:var(--text)}
+
+.semana-wrap{flex:1;overflow:auto;padding:16px 20px 32px}
+.semana-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.semana-title{font-size:14px;font-weight:700;color:var(--text)}
+.semana-subtitle{font-size:12px;color:var(--muted)}
+.semana-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.semana-card{background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:14px}
+.semana-card-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.semana-stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.semana-stat-label{font-size:11px;color:var(--muted)}
+.semana-stat-val{font-size:12px;font-weight:700;font-family:var(--font-mono);color:var(--text)}
+.semana-stat-val.green{color:var(--green)}
+.semana-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
+.semana-temps{display:flex;gap:8px;margin-top:6px}
+.semana-temp-item{display:flex;align-items:center;gap:3px;font-size:11px;color:var(--muted)}
+.semana-temp-item strong{color:var(--text)}
+.semana-changes{background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:14px}
+.semana-changes-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px}
+.semana-change-item{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;margin-bottom:4px;cursor:pointer;transition:background .15s}
+.semana-change-item:hover{background:var(--surface3)}
+.semana-change-deal{font-size:12px;font-weight:600;color:var(--text);min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.semana-change-stage{font-size:11px;color:var(--muted);min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.semana-change-agent{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;white-space:nowrap}
+.semana-empty{font-size:12px;color:var(--muted);font-style:italic;padding:12px 0;text-align:center}
+.semana-pipeline{font-size:10px;color:var(--muted);margin-top:2px}
+.semana-stage-bar{display:flex;gap:2px;margin-top:8px;height:4px;border-radius:2px;overflow:hidden}
+.semana-stage-seg{height:100%;border-radius:2px}
+
+.kpi-wrap{flex:1;overflow:auto;padding:16px 20px 32px}
+.kpi-section{margin-bottom:24px}
+.kpi-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px}
+.kpi-card{background:var(--surface2);border:1px solid var(--border-md);border-radius:var(--radius);padding:12px 14px}
+.kpi-card.alert{border-color:#f8717144}
+.kpi-card.warn{border-color:#fbbf2444}
+.kpi-card.good{border-color:#4ade8044}
+.kpi-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.kpi-value{font-size:24px;font-weight:800;font-family:var(--font-mono);color:var(--text);line-height:1}
+.kpi-value.red{color:#f87171}
+.kpi-value.yellow{color:#fbbf24}
+.kpi-value.green{color:#4ade80}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi-bar-wrap{margin-top:10px}
+.kpi-bar-label{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px}
+.kpi-bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:3px;transition:width .3s}
+.kpi-table{width:100%;border-collapse:collapse;font-size:12px}
+.kpi-table th{text-align:left;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border-md)}
+.kpi-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.kpi-table tr:hover td{background:var(--surface2)}
+.kpi-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px}
+.kpi-pill.red{background:#f8717122;color:#f87171}
+.kpi-pill.yellow{background:#fbbf2422;color:#fbbf24}
+.kpi-pill.green{background:#4ade8022;color:#4ade80}
+.kpi-pill.blue{background:#60a5fa22;color:#60a5fa}
+.kpi-rep-row{display:grid;grid-template-columns:120px 1fr 60px;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)}
+.kpi-rep-name{font-size:11px;font-weight:700;color:var(--text)}
+.kpi-rep-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.kpi-rep-bar-fill{height:100%;border-radius:3px}
+.kpi-rep-val{font-size:11px;font-family:var(--font-mono);color:var(--muted);text-align:right}
+
+.modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 20px}
+.modal-tab{background:none;border:none;padding:10px 14px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.modal-tab.active{color:var(--text);border-bottom-color:var(--green)}
+.modal-tab:hover{color:var(--text)}
+.modal-pane{display:none}
+.modal-pane.active{display:block}
+.playbook-wrap{padding:16px 20px 20px}
+.playbook-stage{margin-bottom:16px}
+.playbook-stage-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.playbook-stage-title .pb-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.playbook-stage.current .playbook-stage-title{color:var(--text)}
+.playbook-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;font-size:12px;color:var(--text)}
+.playbook-item input[type=checkbox]{margin-top:2px;cursor:pointer;accent-color:var(--green);flex-shrink:0}
+.playbook-item label{cursor:pointer;line-height:1.4}
+.playbook-item.done label{color:var(--muted);text-decoration:line-through}
+.playbook-progress{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius)}
+.playbook-progress-bar{flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.playbook-progress-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s}
+.playbook-progress-txt{font-size:11px;color:var(--muted);white-space:nowrap}
+.playbook-other{opacity:.4;pointer-events:none}
+.playbook-questions{margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;border-left:2px solid var(--border-md)}
+.playbook-questions-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;cursor:pointer}
+.playbook-questions-list{font-size:11px;color:var(--muted);line-height:1.6;display:none}
+.playbook-questions-list.open{display:block}
+
+.freeze-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:#f8717122;color:#f87171;cursor:pointer}
+.freeze-badge:hover{background:#f8717133}
+.freeze-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
+.freeze-modal{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--radius-xl);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow)}
+.freeze-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.freeze-modal-title{font-size:14px;font-weight:700;color:var(--text)}
+.freeze-modal-deal{font-size:11px;color:var(--muted);margin-top:2px}
+.freeze-block{padding:16px 20px;border-bottom:1px solid var(--border)}
+.freeze-block-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:12px}
+.freeze-q{margin-bottom:12px}
+.freeze-q label{font-size:12px;font-weight:600;color:var(--text);display:block;margin-bottom:6px}
+.freeze-q textarea{width:100%;background:var(--surface2);border:1px solid var(--border-md);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text);resize:vertical;min-height:56px;font-family:inherit;box-sizing:border-box}
+.freeze-q textarea:focus{outline:none;border-color:var(--green)}
+.freeze-opts{display:flex;flex-wrap:wrap;gap:6px}
+.freeze-opt{background:var(--surface2);border:1px solid var(--border-md);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.freeze-opt:hover{border-color:var(--green);color:var(--text)}
+.freeze-opt.selected{background:var(--green);border-color:var(--green);color:#000}
+.freeze-opt.danger.selected{background:#f87171;border-color:#f87171;color:#fff}
+.freeze-opt.warn.selected{background:#fbbf24;border-color:#fbbf24;color:#000}
+.freeze-opt.ok.selected{background:#4ade80;border-color:#4ade80;color:#000}
+.freeze-decision{display:grid;grid-template-columns:1fr;gap:8px}
+.freeze-decision-opt{padding:10px 14px;border:1px solid var(--border-md);border-radius:8px;cursor:pointer;transition:all .15s}
+.freeze-decision-opt:hover{border-color:var(--green)}
+.freeze-decision-opt.selected.seguir{border-color:#4ade80;background:#4ade8011}
+.freeze-decision-opt.selected.pausar{border-color:#fbbf24;background:#fbbf2411}
+.freeze-decision-opt.selected.inactivo{border-color:#f87171;background:#f8717111}
+.freeze-decision-title{font-size:12px;font-weight:700;color:var(--text)}
+.freeze-decision-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.freeze-foot{padding:14px 20px;display:flex;gap:8px;justify-content:flex-end}
+.freeze-input{width:100%;background:var(--surface2);border:1px solid var(--border-md);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text);font-family:inherit;box-sizing:border-box}
+.freeze-input:focus{outline:none;border-color:var(--green)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">⚡ <span>PulseVolt</span></div>
+    <div class="login-sub">Deal Editor — acceso de agentes</div>
+    <input type="text" id="l-user" placeholder="Usuario" autocomplete="username" />
+    <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" />
+    <div class="login-err" id="l-err"></div>
+    <button class="btn-login" id="l-btn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">⚡ <span>PulseVolt</span> <span style="color:var(--faint);font-weight:400">/ Deal Editor</span></div>
+    <div class="topbar-right">
+      <div class="sync-chip"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Listo</span></div>
+      <div class="topbar-user" id="user-chip">—</div>
+      <button class="btn-sm" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">Deals activos</div><div class="stat-val" id="s-total">—</div></div>
+    <div class="stat"><div class="stat-label">Pipeline</div><div class="stat-val g" id="s-pipe">—</div></div>
+    <div class="stat"><div class="stat-label">Ponderado</div><div class="stat-val" id="s-weighted">—</div></div>
+    <div class="stat"><div class="stat-label">Vencidos</div><div class="stat-val" id="s-overdue" style="color:#f87171">—</div></div>
+    <div class="stat"><div class="stat-label">Ganados</div><div class="stat-val g" id="s-won">—</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-search">
+      <span class="ico">🔍</span>
+      <input id="search" placeholder="Buscar deal, empresa…" oninput="onSearch()" />
+    </div>
+    <select class="sel" id="agent-filter" onchange="render()">
+      <option value="">Todos los agentes</option>
+      <option value="Jorge H">Jorge H</option>
+      <option value="Alberto Rivera">Alberto Rivera</option>
+      <option value="Carlos Cruz">Carlos Cruz</option>
+      <option value="MAURICIO LIRA MORIN">Mauricio Lira</option>
+    </select>
+    <select class="sel" id="view-filter" onchange="render()">
+      <option value="active">Activos</option>
+      <option value="all">Todos</option>
+      <option value="advanced">Avanzados (7+)</option>
+    </select>
+    <div class="view-toggle">
+      <button id="btn-kanban" class="active" onclick="setView('kanban')" title="Vista Kanban">⊞</button>
+      <button id="btn-tabla" onclick="setView('tabla')" title="Vista Tabla">☰</button>
+      <button id="btn-semana" onclick="setView('semana')" title="Resumen Semanal">📊</button>
+      <button id="btn-kpi" onclick="setView('kpi')" title="KPIs">📈</button>
+    </div>
+    <button class="btn-refresh" id="refresh-btn" title="Actualizar" onclick="loadDeals()">🔄</button>
+    <button class="btn-new" onclick="openModal(null)">+ Nuevo deal</button>
+  </div>
+
+  <!-- Mi Día -->
+  <div class="myday-wrap" id="myday-wrap">
+    <div class="myday-header" onclick="toggleMyDay()">
+      <h3>📋 Mi Día</h3>
+      <span class="myday-toggle" id="myday-toggle-icon">▼</span>
+    </div>
+    <div class="myday-body" id="myday-body">
+      <div class="myday-col col-late">
+        <div class="myday-col-title">⚠️ Atrasados <span id="md-late-count">0</span></div>
+        <div id="md-late"></div>
+      </div>
+      <div class="myday-col col-today">
+        <div class="myday-col-title">📅 Hoy <span id="md-today-count">0</span></div>
+        <div id="md-today"></div>
+      </div>
+      <div class="myday-col col-tomorrow">
+        <div class="myday-col-title">📆 Mañana <span id="md-tomorrow-count">0</span></div>
+        <div id="md-tomorrow"></div>
+      </div>
+      <div class="myday-col col-yesterday">
+        <div class="myday-col-title">✅ Ayer <span id="md-yesterday-count">0</span></div>
+        <div id="md-yesterday"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Board -->
+  <div class="board-wrap" id="kanban-wrap">
+    <div class="board" id="board"><div class="loading-state">⏳ Cargando deals…</div></div>
+  </div>
+  <!-- Semana -->
+  <div class="semana-wrap" id="semana-wrap" style="display:none">
+    <div class="semana-header">
+      <div>
+        <div class="semana-title">📊 Resumen Semanal</div>
+        <div class="semana-subtitle" id="semana-periodo">Cargando...</div>
+      </div>
+    </div>
+    <div class="semana-grid" id="semana-grid"></div>
+    <div class="semana-changes">
+      <div class="semana-changes-title">🔄 Deals que avanzaron esta semana</div>
+      <div id="semana-changes-list"></div>
+    </div>
+  </div>
+  <!-- KPIs -->
+  <div class="kpi-wrap" id="kpi-wrap" style="display:none">
+    <div class="kpi-section">
+      <div class="kpi-section-title">📊 Pipeline General</div>
+      <div class="kpi-grid" id="kpi-general"></div>
+    </div>
+    <div class="kpi-section">
+      <div class="kpi-section-title">⚡ Actividad del Equipo</div>
+      <div class="kpi-grid" id="kpi-actividad"></div>
+    </div>
+    <div class="kpi-section">
+      <div class="kpi-section-title">⏱ Velocity por Etapa (días promedio en stage)</div>
+      <div id="kpi-velocity"></div>
+    </div>
+    <div class="kpi-section">
+      <div class="kpi-section-title">👤 Pipeline por Vendedor</div>
+      <div id="kpi-reps"></div>
+    </div>
+    <div class="kpi-section">
+      <div class="kpi-section-title">🚨 Deals en Riesgo (sin movimiento +30 días)</div>
+      <div id="kpi-riesgo"></div>
+    </div>
+  </div>
+  <!-- Tabla -->  <!-- Tabla -->
+  <div class="table-wrap" id="tabla-wrap" style="display:none">
+    <table class="deals-table" id="deals-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('deal_name')">Deal <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('temperatura')">Temp <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('deal_score')">Score <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('stage')">Etapa <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('deal_value_usd')">Valor <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('assigned_to')">Agente <span class="sort-icon">↕</span></th>
+          <th onclick="sortTable('next_followup_date')">Follow-up <span class="sort-icon">↕</span></th>
+          <th>Scores</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="m-title">Nuevo deal</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-tabs" id="m-tabs" style="display:none">
+      <button class="modal-tab active" onclick="switchModalTab('datos')">📋 Datos</button>
+      <button class="modal-tab" onclick="switchModalTab('playbook')">🎯 Playbook</button>
+    </div>
+    <div class="modal-pane active" id="pane-datos">
+      <div class="modal-body" id="m-body"><!-- injected by JS --></div>
+    </div>
+    <div class="modal-pane" id="pane-playbook">
+      <div class="playbook-wrap" id="m-playbook"><!-- injected by JS --></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" id="m-del" onclick="confirmDelete()" style="display:none">🗑 Eliminar</button>
+      <div class="modal-foot-right">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-freeze" id="m-freeze" style="display:none;background:var(--surface2);border:1px solid var(--border-md);color:var(--muted);padding:6px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer" onclick="openFreezeModal(editingDeal?.deal_name)">🧊 Analizar congelamiento</button>
+        <button class="btn-save" id="m-save" onclick="saveDeal()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- FREEZE MODAL -->
+<div class="freeze-modal-overlay" id="freeze-overlay" style="display:none" onclick="if(event.target===this)closeFreezeModal()">
+  <div class="freeze-modal">
+    <div class="freeze-modal-head">
+      <div>
+        <div class="freeze-modal-title">🧊 Análisis de Congelamiento</div>
+        <div class="freeze-modal-deal" id="freeze-deal-name"></div>
+      </div>
+      <button class="modal-close" onclick="closeFreezeModal()">✕</button>
+    </div>
+
+    <!-- Bloque A -->
+    <div class="freeze-block">
+      <div class="freeze-block-title">A · El último momento</div>
+      <div class="freeze-q">
+        <label>¿Cuál fue el último compromiso del cliente contigo?</label>
+        <textarea id="fz-ultimo_compromiso" placeholder="Ej: Me iba a mandar el recibo CFE, me iba a confirmar fecha con finanzas..."></textarea>
+      </div>
+      <div class="freeze-q">
+        <label>¿Lo cumplió?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="compromiso_cumplido" data-val="si" onclick="selectFreezeOpt(this)">✅ Sí lo cumplió</div>
+          <div class="freeze-opt warn" data-field="compromiso_cumplido" data-val="parcialmente" onclick="selectFreezeOpt(this)">⚠️ Parcialmente</div>
+          <div class="freeze-opt danger" data-field="compromiso_cumplido" data-val="no" onclick="selectFreezeOpt(this)">❌ No lo cumplió</div>
+        </div>
+      </div>
+      <div class="freeze-q">
+        <label>¿Cuándo fue tu último contacto real (no un email sin respuesta)?</label>
+        <input type="date" id="fz-ultimo_contacto_real" class="freeze-input">
+      </div>
+    </div>
+
+    <!-- Bloque B -->
+    <div class="freeze-block">
+      <div class="freeze-block-title">B · Solidez de la oportunidad</div>
+      <div class="freeze-q">
+        <label>¿Cuantificaste el costo del problema con el cliente?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="dolor_cuantificado" data-val="si_con_numero" onclick="selectFreezeOpt(this)">✅ Sí, tengo el número</div>
+          <div class="freeze-opt warn" data-field="dolor_cuantificado" data-val="aproximado" onclick="selectFreezeOpt(this)">⚠️ Aproximado</div>
+          <div class="freeze-opt danger" data-field="dolor_cuantificado" data-val="no" onclick="selectFreezeOpt(this)">❌ No lo cuantificamos</div>
+        </div>
+      </div>
+      <div class="freeze-q">
+        <label>¿Sabes quién toma la decisión final?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="sabe_quien_decide" data-val="si" onclick="selectFreezeOpt(this)">✅ Sí, sé quién es</div>
+          <div class="freeze-opt warn" data-field="sabe_quien_decide" data-val="creo" onclick="selectFreezeOpt(this)">⚠️ Creo que sí</div>
+          <div class="freeze-opt danger" data-field="sabe_quien_decide" data-val="no" onclick="selectFreezeOpt(this)">❌ No sé</div>
+        </div>
+      </div>
+      <div class="freeze-q">
+        <label>¿El DM sabe que existe este proyecto?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="dm_sabe_proyecto" data-val="si" onclick="selectFreezeOpt(this)">✅ Sí sabe</div>
+          <div class="freeze-opt warn" data-field="dm_sabe_proyecto" data-val="no_se" onclick="selectFreezeOpt(this)">⚠️ No sé</div>
+          <div class="freeze-opt danger" data-field="dm_sabe_proyecto" data-val="no" onclick="selectFreezeOpt(this)">❌ No sabe</div>
+        </div>
+      </div>
+      <div class="freeze-q">
+        <label>¿Tu contacto tiene poder para impulsar el proyecto internamente?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="contacto_tiene_poder" data-val="si" onclick="selectFreezeOpt(this)">✅ Sí tiene poder</div>
+          <div class="freeze-opt warn" data-field="contacto_tiene_poder" data-val="parcialmente" onclick="selectFreezeOpt(this)">⚠️ Parcialmente</div>
+          <div class="freeze-opt danger" data-field="contacto_tiene_poder" data-val="no" onclick="selectFreezeOpt(this)">❌ No tiene poder</div>
+        </div>
+      </div>
+      <div class="freeze-q">
+        <label>¿Hay urgencia real del lado del cliente?</label>
+        <div class="freeze-opts">
+          <div class="freeze-opt ok" data-field="urgencia_cliente" data-val="alta" onclick="selectFreezeOpt(this)">🔥 Alta</div>
+          <div class="freeze-opt warn" data-field="urgencia_cliente" data-val="media" onclick="selectFreezeOpt(this)">🌡️ Media</div>
+          <div class="freeze-opt danger" data-field="urgencia_cliente" data-val="baja" onclick="selectFreezeOpt(this)">❄️ Baja</div>
+          <div class="freeze-opt danger" data-field="urgencia_cliente" data-val="no_la_veo" onclick="selectFreezeOpt(this)">🚫 No la veo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloque C -->
+    <div class="freeze-block">
+      <div class="freeze-block-title">C · Diagnóstico</div>
+      <div class="freeze-q">
+        <label>¿Por qué crees que realmente se congeló este deal?</label>
+        <textarea id="fz-por_que_congelo" placeholder="Sé honesto. ¿Qué pasó realmente?"></textarea>
+      </div>
+      <div class="freeze-q">
+        <label>¿Qué harías diferente si pudieras hacer el Discovery de nuevo?</label>
+        <textarea id="fz-que_harias_diferente" placeholder="¿Qué pregunta no hiciste? ¿Qué dejaste pasar?"></textarea>
+      </div>
+    </div>
+
+    <!-- Bloque D -->
+    <div class="freeze-block">
+      <div class="freeze-block-title">D · ¿Qué hacemos con este deal?</div>
+      <div class="freeze-decision">
+        <div class="freeze-decision-opt seguir" data-decision="seguir" onclick="selectFreezeDecision(this)">
+          <div class="freeze-decision-title">▶ Seguir intentando</div>
+          <div class="freeze-decision-sub">Tengo un plan concreto para reactivarlo</div>
+        </div>
+        <div class="freeze-decision-opt pausar" data-decision="pausar_90" onclick="selectFreezeDecision(this)">
+          <div class="freeze-decision-title">⏸ Pausar 90 días</div>
+          <div class="freeze-decision-sub">Sale del pipeline activo, lo revisamos en 3 meses</div>
+        </div>
+        <div class="freeze-decision-opt inactivo" data-decision="inactivo" onclick="selectFreezeDecision(this)">
+          <div class="freeze-decision-title">🧊 Marcar como zombie</div>
+          <div class="freeze-decision-sub">No tiene tracción real, lo sacamos del pipeline</div>
+        </div>
+      </div>
+      <div id="fz-seguir-fields" style="display:none;margin-top:12px">
+        <div class="freeze-q">
+          <label>¿Cuál es la próxima acción concreta?</label>
+          <input type="text" id="fz-proxima_accion" class="freeze-input" placeholder="Ej: Llamar a Ricardo González para escalar sobre Oscar Quintero">
+        </div>
+        <div class="freeze-q">
+          <label>¿Para cuándo?</label>
+          <input type="date" id="fz-proxima_fecha" class="freeze-input">
+        </div>
+      </div>
+    </div>
+
+    <div class="freeze-foot">
+      <button class="btn-cancel" onclick="closeFreezeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveFreezeAnalysis()">Guardar análisis</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────────────────────
+const API = 'https://pipeline-board-vercel.vercel.app';
+
+const STAGES = [
+  { key:'0 · Perdido',                          name:'Perdido ✗',                    color:'#dc2626', prob:0  },
+  { key:'1 · Discovery Call',                   name:'Discovery Call',               color:'#94a3b8', prob:5  },
+  { key:'2 · Propuesta Preliminar',             name:'Propuesta Preliminar',         color:'#60a5fa', prob:15 },
+  { key:'3 · Reunión con Producción',           name:'Reunión con Producción',       color:'#818cf8', prob:25 },
+  { key:'4 · Reunión con Calidad',              name:'Reunión con Calidad',          color:'#a78bfa', prob:35 },
+  { key:'5 · Reunión con Finanzas',             name:'Reunión con Finanzas',         color:'#c084fc', prob:45 },
+  { key:'6 · Reunión Técnica / Pre-Ingeniería', name:'Reunión Técnica',              color:'#e879f9', prob:55 },
+  { key:'7 · Desarrollo del Business Case',     name:'Desarrollo Business Case',     color:'#f472b6', prob:70 },
+  { key:'8 · Presentación Ejecutiva',           name:'Presentación Ejecutiva',       color:'#fb923c', prob:85 },
+  { key:'11 · Cambios en Contrato',             name:'Cambios Contrato',       color:'#15803d', prob:90 },
+  { key:'13 · Ganado',                          name:'Ganado ✓',               color:'#eab308', prob:100 },
+];
+
+const AGENT_CFG = {
+  'Jorge H':             { color:'#f97316', bg:'rgba(249,115,22,.2)' },
+  'Alberto Rivera':      { color:'#3b82f6', bg:'rgba(59,130,246,.2)' },
+  'Carlos Cruz':         { color:'#22c55e', bg:'rgba(34,197,94,.2)' },
+  'MAURICIO LIRA MORIN': { color:'#a855f7', bg:'rgba(168,85,247,.2)' },
+};
+
+const PRIORITY_ORDER = ['Muy alta','Alta','Medio','Baja'];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let allDeals = [];
+let currentUser = null;
+let token = null;
+let editingDeal = null; // null = new, obj = existing
+let dragId = null;
+let searchTimer = null;
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('l-user').value.trim().toLowerCase();
+  const pass = document.getElementById('l-pass').value;
+  const btn  = document.getElementById('l-btn');
+  const err  = document.getElementById('l-err');
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+  try {
+    const res  = await fetch(API + '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({ username: user, password: pass })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error de autenticación');
+    token = data.token;
+    currentUser = { name: data.name, role: data.role, seller: data.seller };
+    // Mirror to localStorage so the main app stays logged in too
+    localStorage.setItem('pv_token', token);
+    localStorage.setItem('pv_user', JSON.stringify(currentUser));
+    showApp();
+  } catch(e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+}
+
+function logout() {
+  fetch(API + '/api/logout', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer ' + token }
+  }).catch(()=>{});
+  token = null; currentUser = null; allDeals = [];
+  localStorage.removeItem('pv_token');
+  localStorage.removeItem('pv_user');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-pass').value = '';
+}
+
+function checkStoredAuth() {
+  const t = localStorage.getItem('pv_token');
+  const u = localStorage.getItem('pv_user');
+  if (t && u) {
+    try {
+      token = t;
+      currentUser = JSON.parse(u);
+      return true;
+    } catch(e) {}
+  }
+  return false;
+}
+
+// ─── API helpers ──────────────────────────────────────────────────────────────
+async function dbQuery(sql) {
+  setSyncing(true);
+  try {
+    const res = await fetch(API + '/api/query', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ sql })
+    });
+    if (res.status === 401) { logout(); return []; }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error || res.statusText); }
+    const data = await res.json();
+    return data.rows || [];
+  } finally {
+    setSyncing(false);
+  }
+}
+
+async function apiPost(endpoint, body) {
+  setSyncing(true);
+  try {
+    const res = await fetch(API + endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(body)
+    });
+    if (res.status === 401) { logout(); throw new Error('Sesión expirada'); }
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Error en servidor');
+    return data;
+  } finally {
+    setSyncing(false);
+  }
+}
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
+async function loadDeals() {
+  const rbtn = document.getElementById('refresh-btn');
+  if (rbtn) { rbtn.style.animation = 'pulse 1s infinite'; rbtn.disabled = true; }
+  try {
+    let sql = 'SELECT * FROM deals ORDER BY deal_name';
+    if (currentUser?.role === 'vendedor' && currentUser?.seller) {
+      const s = currentUser.seller.replace(/'/g,"''");
+      sql = `SELECT * FROM deals WHERE assigned_to = '${s}' ORDER BY deal_name`;
+    }
+    allDeals = await dbQuery(sql);
+    render();
+    renderMyDay();
+    setSaved();
+  } catch(e) {
+    toast('Error cargando: ' + e.message, true);
+  } finally {
+    if (rbtn) { rbtn.style.animation = ''; rbtn.disabled = false; }
+  }
+}
+
+// ─── Filter ───────────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q     = document.getElementById('search')?.value?.toLowerCase() || '';
+  const agent = document.getElementById('agent-filter')?.value || '';
+  const view  = document.getElementById('view-filter')?.value || 'active';
+  let ds = allDeals;
+  if (agent) ds = ds.filter(d => d.assigned_to === agent);
+  if (q)     ds = ds.filter(d =>
+    (d.deal_name||'').toLowerCase().includes(q) ||
+    (d.company||'').toLowerCase().includes(q) ||
+    (d.primary_contact||'').toLowerCase().includes(q)
+  );
+  if (view === 'active')   ds = ds.filter(d => d.stage !== '0 · Perdido' && d.stage !== '13 · Ganado');
+  if (view === 'advanced') ds = ds.filter(d => parseInt(d.stage) >= 7);
+  return ds;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function updateStats(ds) {
+  const active = ds.filter(d => d.stage !== '13 · Ganado' && d.stage !== '0 · Perdido');
+  const pipe   = active.reduce((s,d) => s + (+d.deal_value_usd||0), 0);
+  const weighted = active.reduce((s,d) => {
+    const st = STAGES.find(s=>s.key===d.stage);
+    const prob = d.probability ?? (st?.prob ?? 0);
+    return s + (+d.deal_value_usd||0) * (prob/100);
+  }, 0);
+  const overdue = active.filter(d => {
+    if (!d.next_followup_date) return false;
+    return normalizeDate(d.next_followup_date) < today();
+  }).length;
+  const won = ds.filter(d => d.stage === '13 · Ganado').length;
+
+  document.getElementById('s-total').textContent    = active.length;
+  document.getElementById('s-pipe').textContent     = '$' + fmtNum(pipe);
+  document.getElementById('s-weighted').textContent = '$' + fmtNum(Math.round(weighted));
+  document.getElementById('s-overdue').textContent  = overdue;
+  document.getElementById('s-won').textContent      = won;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const ds = getFiltered();
+  updateStats(ds);
+
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  const grouped = {};
+  STAGES.forEach(s => { grouped[s.key] = []; });
+  ds.forEach(d => { if (grouped[d.stage] !== undefined) grouped[d.stage].push(d); });
+
+  const viewFilter = document.getElementById('view-filter')?.value || 'active';
+
+  STAGES.forEach(stage => {
+    if (viewFilter === 'active' && (stage.key === '0 · Perdido' || stage.key === '13 · Ganado')) return;
+    if (viewFilter === 'advanced' && parseInt(stage.key) < 7) return;
+
+    const colDeals = grouped[stage.key] || [];
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.innerHTML = `
+      <div class="col-head" style="border-top:2px solid ${stage.color}">
+        <div class="col-dot" style="background:${stage.color}"></div>
+        <div class="col-name" title="${esc(stage.name)}">${esc(stage.name)}</div>
+        <div class="col-cnt">${colDeals.length}</div>
+      </div>
+      <div class="col-body" id="body-${CSS.escape(stage.key)}"></div>`;
+    board.appendChild(col);
+
+    const body = col.querySelector('.col-body');
+
+    // Drag events
+    body.addEventListener('dragover', e => { e.preventDefault(); body.classList.add('drag-over'); });
+    body.addEventListener('dragleave', () => body.classList.remove('drag-over'));
+    body.addEventListener('drop', async e => {
+      e.preventDefault(); body.classList.remove('drag-over');
+      if (!dragId) return;
+      const deal = allDeals.find(d => d.deal_name === dragId);
+      if (!deal || deal.stage === stage.key) return;
+      deal.stage = stage.key;
+      render();
+      try {
+        await apiPost('/api/edit_deal', { deal_name: dragId, field: 'stage', value: stage.key });
+        toast('Movido a: ' + stage.name);
+        await loadDeals();
+      } catch(e) { toast('Error al mover: ' + e.message, true); await loadDeals(); }
+      dragId = null;
+    });
+
+    if (colDeals.length === 0) {
+      body.innerHTML = '<div class="empty-col">Sin deals</div>';
+      return;
+    }
+
+    // Sort by priority then value
+    const sorted = [...colDeals].sort((a,b) => {
+      const pa = PRIORITY_ORDER.indexOf(a.priority);
+      const pb = PRIORITY_ORDER.indexOf(b.priority);
+      if (pa !== pb) return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
+      return (+b.deal_value_usd||0) - (+a.deal_value_usd||0);
+    });
+
+    sorted.forEach(deal => body.appendChild(makeCard(deal)));
+  });
+}
+
+
+function levelDots(val, label) {
+  const n = parseInt(val) || 0;
+  if (!n) return '';
+  const filled = '●'.repeat(n);
+  const empty  = '○'.repeat(3 - n);
+  return '<span class="level-dot" title="' + label + '">' + filled + empty + '</span>';
+}
+
+function makeCard(deal) {
+  const c = document.createElement('div');
+  c.className = 'card';
+  c.draggable = true;
+  c.dataset.name = deal.deal_name;
+
+  const val    = deal.deal_value_usd ? '$' + fmtNum(+deal.deal_value_usd) : '—';
+  const priCls = { 'Muy alta':'badge-muy-alta','Alta':'badge-alta','Medio':'badge-medio','Baja':'badge-baja' }[deal.priority] || 'badge-baja';
+  const priBdg = deal.priority ? `<span class="card-badge ${priCls}">${esc(deal.priority)}</span>` : '';
+  const fu     = deal.next_followup_date ? normalizeDate(deal.next_followup_date) : null;
+  const fuCls  = fu ? (fu < today() ? 'overdue' : fu === today() ? 'today' : '') : '';
+  const fuTxt  = fu ? `📅 ${fmtDate(fu)}` : '';
+  const agCfg  = AGENT_CFG[deal.assigned_to];
+  const agBdg  = agCfg ? `<span class="card-agent" style="background:${agCfg.bg};color:${agCfg.color}">${initials(deal.assigned_to)}</span>` : '';
+
+  c.innerHTML = `
+    <div class="card-name">${esc(deal.deal_name)}</div>
+    ${deal.company && deal.company !== deal.deal_name ? `<div class="card-company">${esc(deal.company)}</div>` : ''}
+    <div class="card-row">
+      <span class="card-val">${val}</span>
+      <span class="card-score" title="Deal Score">${deal.deal_score ? deal.deal_score + '%' : '—'}</span>
+      ${tempBadge(deal.temperatura)}
+      ${(deal.stage_change_date && (new Date()-new Date(deal.stage_change_date))/86400000 > 21) ? `<span class="freeze-badge" onclick="event.stopPropagation();openFreezeModal('${esc(deal.deal_name)}')" title="Deal congelado — analizar">🧊 ${Math.round((new Date()-new Date(deal.stage_change_date))/86400000)}d</span>` : ''}
+      ${priBdg}
+    </div>
+    ${fuTxt ? `<div class="card-followup ${fuCls}">${fuTxt}</div>` : ''}
+    <div class="card-levels">
+      ${levelDots(deal.nivel_contacto_score,'Nivel de Contacto')}
+      ${levelDots(deal.etapa_proceso_score,'Etapa del Proceso')}
+      ${levelDots(deal.solidez_bc_score,'Business Case')}
+      ${levelDots(deal.tipo_cliente_score,'Tipo de Cliente')}
+    </div>
+    ${agBdg}
+    <button class="card-edit" onclick="event.stopPropagation();openModal('${esc(deal.deal_name)}')" title="Editar">✏️</button>`;
+
+  c.addEventListener('click', () => openModal(deal.deal_name));
+  c.addEventListener('dragstart', () => { dragId = deal.deal_name; c.classList.add('dragging'); });
+  c.addEventListener('dragend',   () => { c.classList.remove('dragging'); });
+  return c;
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal(dealName) {
+  const deal = dealName ? allDeals.find(d => d.deal_name === dealName) : null;
+  editingDeal = deal || null;
+
+  document.getElementById('m-title').textContent = deal ? deal.deal_name : 'Nuevo deal';
+  document.getElementById('m-del').style.display = deal ? '' : 'none';
+  document.getElementById('m-save').disabled = false;
+  // Mostrar tabs solo en deals existentes
+  document.getElementById('m-tabs').style.display = deal ? '' : 'none';
+  const freezeBtn = document.getElementById('m-freeze');
+  if (freezeBtn) {
+    const daysFrozen = deal?.stage_change_date ? (new Date()-new Date(deal.stage_change_date))/86400000 : 0;
+    freezeBtn.style.display = (deal && daysFrozen > 21) ? '' : 'none';
+  }
+  // Resetear a tab Datos al abrir
+  document.querySelectorAll('.modal-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('.modal-pane').forEach((p,i) => p.classList.toggle('active', i===0));
+  // Renderizar playbook
+  if (deal) renderPlaybook(deal);
+
+  // Build form
+  const stageOpts = STAGES.map(s =>
+    `<option value="${esc(s.key)}" ${deal?.stage === s.key ? 'selected':''}>${esc(s.name)}</option>`
+  ).join('');
+  const agentOpts = [
+    ['Jorge H','Jorge H'],
+    ['Alberto Rivera','Alberto Rivera'],
+    ['Carlos Cruz','Carlos Cruz'],
+    ['MAURICIO LIRA MORIN','Mauricio Lira']
+  ].map(([v,l]) => `<option value="${v}" ${deal?.assigned_to === v ? 'selected':''}>${l}</option>`).join('');
+  const priOpts = ['','Muy alta','Alta','Medio','Baja'].map(p =>
+    `<option value="${p}" ${(deal?.priority||'') === p ? 'selected':''}>${p||'—'}</option>`
+  ).join('');
+  const v = f => esc(deal?.[f] || '');
+  const vn = f => deal?.[f] != null ? deal[f] : '';
+  const vd = f => deal?.[f] ? normalizeDate(deal[f]) : '';
+
+  document.getElementById('m-body').innerHTML = `
+    <div class="form-group form-full">
+      <label>Nombre del deal *</label>
+      <input id="f-deal_name" value="${v('deal_name')}" placeholder="Ej: Sigma Alimentos — BESS 2MW" ${deal ? 'disabled style="opacity:.6"' : ''} />
+    </div>
+    <div class="form-group">
+      <label>Empresa</label>
+      <input id="f-company" value="${v('company')}" placeholder="Nombre empresa" />
+    </div>
+    <div class="form-group">
+      <label>Contacto principal</label>
+      <input id="f-primary_contact" value="${v('primary_contact')}" placeholder="Nombre contacto" />
+    </div>
+    <div class="form-group">
+      <label>Etapa</label>
+      <select id="f-stage">${stageOpts}</select>
+    </div>
+    <div class="form-group">
+      <label>Agente</label>
+      <select id="f-assigned_to"><option value="">—</option>${agentOpts}</select>
+    </div>
+    <div class="form-group">
+      <label>Valor USD</label>
+      <input id="f-deal_value_usd" type="number" value="${vn('deal_value_usd')}" placeholder="0" min="0" step="1000" />
+    </div>
+    <div class="form-group">
+      <label>Probabilidad %</label>
+      <input id="f-probability" type="number" value="${vn('probability')}" placeholder="Auto" min="0" max="100" />
+    </div>
+    <div class="form-group">
+      <label>Prioridad</label>
+      <select id="f-priority">${priOpts}</select>
+    </div>
+      <label>Próximo follow-up</label>
+      <input id="f-next_followup_date" type="date" value="${vd('next_followup_date')}" />
+    </div>
+    <div class="form-group">
+      <label>Fecha cierre estimada</label>
+      <input id="f-close_date" type="date" value="${vd('close_date')}" />
+    </div>
+    <div class="form-group form-full">
+      <label>Próxima acción</label>
+      <input id="f-next_action" value="${v('next_action')}" placeholder="Ej: Llamar el martes para confirmar demo" />
+    </div>
+    <div class="form-group form-full">
+      <label>Notas última interacción</label>
+      <textarea id="f-last_interaction_notes" placeholder="Resumen de la última llamada / reunión…">${v('last_interaction_notes')}</textarea>
+    </div>
+    <div class="form-group form-full">
+      <label>Notas de etapa</label>
+      <textarea id="f-stage_notes" placeholder="Contexto de la etapa actual…">${v('stage_notes')}</textarea>
+    </div>
+    <div class="form-group form-full">
+      <label>Pain signals</label>
+      <textarea id="f-pain_signals" placeholder="Problemas / dolores identificados…">${v('pain_signals')}</textarea>
+    </div>
+
+    <div class="modal-section">Datos técnicos</div>
+    <div class="form-group">
+      <label>Planta</label>
+      <input id="f-facility" value="${v('facility')}" placeholder="Nombre planta" />
+    </div>
+    <div class="modal-section">Evaluación de la oportunidad</div>
+    <div class="form-group">
+      <label>Nivel de Contacto</label>
+      <select id="f-nivel_contacto_score">
+        <option value="">— Sin evaluar —</option>
+        <option value="1" ${v('nivel_contacto_score')=='1'?'selected':''}>Nivel 1 — Sin acceso gerencial</option>
+        <option value="2" ${v('nivel_contacto_score')=='2'?'selected':''}>Nivel 2 — Acceso gerencial</option>
+        <option value="3" ${v('nivel_contacto_score')=='3'?'selected':''}>Nivel 3 — Acceso C-Level</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Etapa del Proceso</label>
+      <select id="f-etapa_proceso_score">
+        <option value="">— Sin evaluar —</option>
+        <option value="1" ${v('etapa_proceso_score')=='1'?'selected':''}>Nivel 1 — Inicial</option>
+        <option value="2" ${v('etapa_proceso_score')=='2'?'selected':''}>Nivel 2 — En desarrollo</option>
+        <option value="3" ${v('etapa_proceso_score')=='3'?'selected':''}>Nivel 3 — Avanzado</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Business Case</label>
+      <select id="f-solidez_bc_score">
+        <option value="">— Sin evaluar —</option>
+        <option value="1" ${v('solidez_bc_score')=='1'?'selected':''}>Nivel 1 — Por construir</option>
+        <option value="2" ${v('solidez_bc_score')=='2'?'selected':''}>Nivel 2 — En revisión</option>
+        <option value="3" ${v('solidez_bc_score')=='3'?'selected':''}>Nivel 3 — Validado con cliente</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tipo de Cliente</label>
+      <select id="f-tipo_cliente_score">
+        <option value="">— Sin evaluar —</option>
+        <option value="1" ${v('tipo_cliente_score')=='1'?'selected':''}>Nivel 1 — Baja necesidad</option>
+        <option value="2" ${v('tipo_cliente_score')=='2'?'selected':''}>Nivel 2 — Necesidad media</option>
+        <option value="3" ${v('tipo_cliente_score')=='3'?'selected':''}>Nivel 3 — Alta necesidad</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tamaño sistema (MW)</label>
+      <input id="f-system_size_mw" type="number" value="${vn('system_size_mw')}" placeholder="0" step="0.1" />
+    </div>
+    <div class="form-group">
+      <label>Duración almacenamiento (h)</label>
+      <input id="f-storage_duration_hrs" type="number" value="${vn('storage_duration_hrs')}" placeholder="0" />
+    </div>
+    <div class="form-group">
+      <label>Payback estimado (años)</label>
+      <input id="f-payback_period_yrs" type="number" value="${vn('payback_period_yrs')}" placeholder="0" step="0.5" />
+    </div>
+    <div class="form-group">
+      <label>Costo energía anual (USD)</label>
+      <input id="f-annual_energy_cost_usd" type="number" value="${vn('annual_energy_cost_usd')}" placeholder="0" />
+    </div>
+  `;
+
+  document.getElementById('overlay').style.display = 'flex';
+  setTimeout(() => {
+    const first = document.getElementById(deal ? 'f-company' : 'f-deal_name');
+    if (first) first.focus();
+  }, 60);
+}
+
+function closeModal() {
+  document.getElementById('overlay').style.display = 'none';
+  editingDeal = null;
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+async function saveDeal() {
+  const btn = document.getElementById('m-save');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    const fv = id => {
+      const el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    };
+    const fn = id => {
+      const v = fv(id);
+      return v === '' ? null : Number(v);
+    };
+
+    const dealName = editingDeal ? editingDeal.deal_name : fv('f-deal_name');
+    if (!dealName) { toast('El nombre del deal es requerido', true); return; }
+
+    // All editable fields sent via /api/edit_deal one by one
+    const allFields = {
+      company:                 fv('f-company'),
+      primary_contact:         fv('f-primary_contact'),
+      stage:                   fv('f-stage'),
+      assigned_to:             fv('f-assigned_to'),
+      deal_value_usd:          fn('f-deal_value_usd'),
+      probability_pct:          fn('f-probability'),
+      priority:                fv('f-priority'),
+      close_date:              fv('f-close_date'),
+      next_action:             fv('f-next_action'),
+      next_followup_date:      fv('f-next_followup_date'),
+      last_interaction_notes:  fv('f-last_interaction_notes'),
+      stage_notes:             fv('f-stage_notes'),
+      pain_signals:            fv('f-pain_signals'),
+      facility:                fv('f-facility'),
+      nivel_contacto_score:           fv('f-nivel_contacto_score'),
+      etapa_proceso_score:            fv('f-etapa_proceso_score'),
+      solidez_bc_score:   fv('f-solidez_bc_score'),
+      tipo_cliente_score:          fv('f-tipo_cliente_score'),
+      system_size_mw:          fn('f-system_size_mw'),
+      storage_duration_hrs:    fn('f-storage_duration_hrs'),
+      payback_period_yrs:      fn('f-payback_period_yrs'),
+      annual_energy_cost_usd:  fn('f-annual_energy_cost_usd'),
+    };
+
+    // Date fields stored as full timestamps in DB — normalize for comparison
+    const dateFields = new Set(['close_date','next_followup_date']);
+
+    if (editingDeal) {
+      const updates = [];
+      for (const [field, value] of Object.entries(allFields)) {
+        const raw = editingDeal[field];
+        // Normalize old value: dates come back as full ISO strings, trim to YYYY-MM-DD
+        const oldNorm = dateFields.has(field)
+          ? normalizeDate(raw)
+          : (raw === undefined || raw === null ? '' : String(raw));
+        // Normalize new value
+        const newNorm = (value === undefined || value === null) ? '' : String(value);
+        if (newNorm !== oldNorm) {
+          updates.push({ field, value: newNorm });
+        }
+      }
+      if (updates.length === 0) { toast('Sin cambios'); closeModal(); return; }
+
+      // Send each changed field — skip if API rejects (log but don't block)
+      const errors = [];
+      for (const u of updates) {
+        try {
+          await apiPost('/api/edit_deal', { deal_name: dealName, field: u.field, value: u.value });
+        } catch(e) {
+          errors.push(`${u.field}: ${e.message}`);
+        }
+      }
+      if (errors.length > 0 && errors.length === updates.length) {
+        throw new Error(errors[0]); // all failed — surface the error
+      }
+      toast(errors.length > 0 ? `✓ Guardado (${errors.length} campo(s) sin guardar)` : '✓ Deal actualizado');
+    } else {
+      // Create new deal
+      await apiPost('/api/create_deal', {
+        deal_name: dealName,
+        assigned_to: allFields.assigned_to || null,
+        stage: allFields.stage || '1 · Discovery Call',
+        primary_contact: allFields.primary_contact || null,
+        company: allFields.company || null,
+        fields: Object.fromEntries(
+          Object.entries(allFields).filter(([k]) =>
+            !['assigned_to','stage','primary_contact','company'].includes(k)
+          )
+        )
+      });
+      toast('✓ Deal creado');
+    }
+
+    closeModal();
+    await loadDeals();
+  } catch(e) {
+    toast('Error: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+}
+
+async function confirmDelete() {
+  if (!editingDeal) return;
+  if (!confirm(`¿Eliminar "${editingDeal.deal_name}" permanentemente?\nEsta acción no se puede deshacer.`)) return;
+  try {
+    await apiPost('/api/delete_deal', { deal_name: editingDeal.deal_name });
+    toast('Deal eliminado');
+    closeModal();
+    await loadDeals();
+  } catch(e) {
+    toast('Error: ' + e.message, true);
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function fmtNum(n) { return Number(n||0).toLocaleString('es-MX'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function normalizeDate(d) { return d ? String(d).slice(0,10) : ''; }
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('es-MX', { day:'numeric', month:'short' });
+}
+function initials(name) { return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+
+function setSyncing(busy) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-txt');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (busy ? ' busy' : '');
+  txt.textContent = busy ? 'Sincronizando…' : '';
+}
+function setSaved() {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-txt');
+  if (!dot) return;
+  dot.className = 'sync-dot';
+  txt.textContent = '✓ Actualizado';
+  setTimeout(() => { txt.textContent = 'Listo'; }, 2000);
+}
+
+function toast(msg, isErr=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + (isErr ? 'err' : 'ok');
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = 'none'; }, 2600);
+}
+
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(render, 200);
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-chip').textContent = currentUser?.name || '—';
+  // Lock agent filter for vendedores
+  if (currentUser?.role === 'vendedor' && currentUser?.seller) {
+    const af = document.getElementById('agent-filter');
+    af.value = currentUser.seller;
+    af.disabled = true;
+  }
+  loadDeals();
+}
+
+
+
+
+
+
+async function editMeta() {
+  const current = window._metaAnual || 30000000;
+  const input = prompt(`Meta anual de ventas (USD):\nActual: $${fmtNum(current)}\n\nIngresa el nuevo valor (solo números):`, current);
+  if (!input) return;
+  const val = parseFloat(input.replace(/[^0-9.]/g,''));
+  if (!val || isNaN(val)) { alert('Valor inválido'); return; }
+  try {
+    await apiPost('/api/execute', { sql: `INSERT INTO config (key, value, updated_at) VALUES ('meta_anual_usd', '${val}', NOW()) ON CONFLICT (key) DO UPDATE SET value = '${val}', updated_at = NOW()` });
+    window._metaAnual = val;
+    renderKPI();
+  } catch(e) { alert('Error guardando: ' + e.message); }
+}
+
+// ─── Vista KPIs ───────────────────────────────────────────────────────────────
+async function renderKPI() {
+  const agentF = document.getElementById('agent-filter')?.value || '';
+
+  let deals = [...allDeals].filter(d => d.stage !== '0 · Perdido' && d.stage !== '13 · Ganado');
+  if (agentF) deals = deals.filter(d => d.assigned_to === agentF);
+
+  const todayStr = today();
+
+  // ── KPI General ─────────────────────────────────────────────────────────────
+  const totalDeals    = deals.length;
+  const pipelineTotal = deals.reduce((a,d) => a + parseFloat(d.deal_value_usd||0), 0);
+  const avgScore      = deals.filter(d=>d.deal_score).reduce((a,d) => a + parseFloat(d.deal_score||0), 0) / (deals.filter(d=>d.deal_score).length||1);
+
+  // Cargar meta desde BD
+  let META = window._metaAnual || 30000000;
+  if (!window._metaAnual) {
+    try {
+      const cfgRows = await dbQuery(`SELECT value FROM config WHERE key = 'meta_anual_usd'`);
+      META = parseFloat(cfgRows?.[0]?.value || 30000000);
+      window._metaAnual = META;
+    } catch(e) { META = 30000000; }
+  }
+  const coverage      = pipelineTotal / META * 100;
+  const coverageClass = coverage >= 300 ? 'green' : coverage >= 150 ? 'yellow' : 'red';
+
+  document.getElementById('kpi-general').innerHTML = `
+    <div class="kpi-card ${coverage >= 300 ? 'good' : coverage >= 150 ? 'warn' : 'alert'}">
+      <div class="kpi-label" style="display:flex;justify-content:space-between;align-items:center">
+        Pipeline Total
+        ${currentUser?.role === 'admin' ? `<span onclick="editMeta()" style="cursor:pointer;font-size:10px;color:var(--muted);font-weight:400">✏️ meta</span>` : ''}
+      </div>
+      <div class="kpi-value ${coverageClass}">$${fmtNum(pipelineTotal)}</div>
+      <div class="kpi-sub">Meta: $${fmtNum(META)} USD</div>
+      <div class="kpi-bar-wrap">
+        <div class="kpi-bar-label"><span>Coverage</span><span>${coverage.toFixed(0)}%</span></div>
+        <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(coverage/5,100)}%;background:${coverage>=300?'#4ade80':coverage>=150?'#fbbf24':'#f87171'}"></div></div>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Deals Activos</div>
+      <div class="kpi-value">${totalDeals}</div>
+      <div class="kpi-sub">en ${agentF ? '1 rep' : '4 reps'}</div>
+    </div>
+    <div class="kpi-card ${avgScore >= 70 ? 'good' : avgScore >= 50 ? 'warn' : 'alert'}">
+      <div class="kpi-label">Score Promedio</div>
+      <div class="kpi-value ${avgScore >= 70 ? 'green' : avgScore >= 50 ? 'yellow' : 'red'}">${avgScore.toFixed(1)}%</div>
+      <div class="kpi-sub">${deals.filter(d=>!d.deal_score).length} sin evaluar</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Ticket Promedio</div>
+      <div class="kpi-value">$${fmtNum(pipelineTotal / (totalDeals||1))}</div>
+      <div class="kpi-sub">USD por deal</div>
+    </div>
+  `;
+
+  // ── KPI Actividad ────────────────────────────────────────────────────────────
+  const inactivos     = deals.filter(d => d.stage_change_date && (new Date() - new Date(d.stage_change_date)) / 86400000 > 14).length;
+  const fuVencidos    = deals.filter(d => d.next_followup_date && String(d.next_followup_date).slice(0,10) < todayStr).length;
+  const sinFollowup   = deals.filter(d => !d.next_followup_date).length;
+  const calientes     = deals.filter(d => d.temperatura === 'Caliente').length;
+  const pctInactivo   = totalDeals ? Math.round(inactivos / totalDeals * 100) : 0;
+  const pctVencido    = totalDeals ? Math.round((fuVencidos + sinFollowup) / totalDeals * 100) : 0;
+
+  document.getElementById('kpi-actividad').innerHTML = `
+    <div class="kpi-card ${pctInactivo > 50 ? 'alert' : pctInactivo > 30 ? 'warn' : 'good'}">
+      <div class="kpi-label">Sin Movimiento +14 días</div>
+      <div class="kpi-value ${pctInactivo > 50 ? 'red' : pctInactivo > 30 ? 'yellow' : 'green'}">${inactivos}</div>
+      <div class="kpi-sub">${pctInactivo}% del pipeline</div>
+    </div>
+    <div class="kpi-card ${pctVencido > 40 ? 'alert' : pctVencido > 20 ? 'warn' : 'good'}">
+      <div class="kpi-label">Follow-up Vencido / Sin fecha</div>
+      <div class="kpi-value ${pctVencido > 40 ? 'red' : pctVencido > 20 ? 'yellow' : 'green'}">${fuVencidos + sinFollowup}</div>
+      <div class="kpi-sub">${fuVencidos} vencidos · ${sinFollowup} sin fecha</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Deals Calientes 🔥</div>
+      <div class="kpi-value ${calientes > 5 ? 'green' : calientes > 0 ? 'yellow' : 'red'}">${calientes}</div>
+      <div class="kpi-sub">${totalDeals ? Math.round(calientes/totalDeals*100) : 0}% del pipeline activo</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Deals con Score</div>
+      <div class="kpi-value">${deals.filter(d=>d.deal_score).length}</div>
+      <div class="kpi-sub">de ${totalDeals} activos</div>
+    </div>
+  `;
+
+  // ── Velocity por Stage ───────────────────────────────────────────────────────
+  const stageConfig = [
+    { key:'1 · Discovery Call',                   name:'Discovery Call',       color:'#94a3b8' },
+    { key:'2 · Propuesta Preliminar',             name:'Propuesta Preliminar', color:'#60a5fa' },
+    { key:'3 · Reunión con Producción',           name:'Reunión Producción',   color:'#818cf8' },
+    { key:'4 · Reunión con Calidad',              name:'Reunión Calidad',      color:'#a78bfa' },
+    { key:'5 · Reunión con Finanzas',             name:'Reunión Finanzas',     color:'#c084fc' },
+    { key:'6 · Reunión Técnica / Pre-Ingeniería', name:'Reunión Técnica',      color:'#e879f9' },
+    { key:'7 · Desarrollo del Business Case',     name:'Business Case',        color:'#f472b6' },
+    { key:'8 · Presentación Ejecutiva',           name:'Presentación Ejecutiva',color:'#fb923c'},
+  ];
+  const maxDias = 200;
+
+  let velHtml = '';
+  stageConfig.forEach(({ key, name, color }) => {
+    const stageDeals = deals.filter(d => d.stage === key);
+    const count      = stageDeals.length;
+    const withDate   = stageDeals.filter(d => d.stage_change_date);
+
+    // Calcular días — con fecha si hay, sino mostrar el conteo igual
+    let avgDias = null;
+    if (withDate.length) {
+      avgDias = withDate.reduce((a,d) => {
+        return a + (new Date() - new Date(d.stage_change_date)) / 86400000;
+      }, 0) / withDate.length;
+    }
+
+    if (!count) return; // omitir stages vacíos
+
+    const pct = avgDias ? Math.min(avgDias / maxDias * 100, 100) : 0;
+    const cls = !avgDias ? 'blue' : avgDias > 90 ? 'red' : avgDias > 45 ? 'yellow' : 'green';
+    const label = avgDias ? `${Math.round(avgDias)}d` : `${count} deals`;
+
+    velHtml += `<div class="kpi-rep-row">
+      <div class="kpi-rep-name" style="font-size:11px">${name} <span style="color:var(--muted);font-weight:400">(${count})</span></div>
+      <div class="kpi-rep-bar"><div class="kpi-rep-bar-fill" style="width:${pct || 10}%;background:${color}"></div></div>
+      <div class="kpi-rep-val"><span class="kpi-pill ${cls}">${label}</span></div>
+    </div>`;
+  });
+  document.getElementById('kpi-velocity').innerHTML = velHtml || '<div style="font-size:12px;color:var(--muted)">Sin datos de velocity todavía.</div>';
+
+  // ── Pipeline por Vendedor ────────────────────────────────────────────────────
+  const REPS = ['Alberto Rivera','Carlos Cruz','MAURICIO LIRA MORIN','Jorge H','Horacio Garcia','Alejandro'];
+  const REP_COLORS = ['#0ea5e9','#f59e0b','#10b981','#6366f1','#ec4899','#8b5cf6'];
+  const maxPipeline = Math.max(...REPS.map(r => deals.filter(d=>d.assigned_to===r).reduce((a,d)=>a+parseFloat(d.deal_value_usd||0),0)));
+
+  let repHtml = '';
+  REPS.forEach((rep, i) => {
+    const repDeals  = deals.filter(d => d.assigned_to === rep);
+    if (!repDeals.length) return;
+    const pipeline  = repDeals.reduce((a,d) => a + parseFloat(d.deal_value_usd||0), 0);
+    const avgSc     = repDeals.filter(d=>d.deal_score).reduce((a,d)=>a+parseFloat(d.deal_score||0),0) / (repDeals.filter(d=>d.deal_score).length||1);
+    const pct       = maxPipeline ? pipeline / maxPipeline * 100 : 0;
+    const initials  = rep.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    repHtml += `<div class="kpi-rep-row" style="grid-template-columns:140px 1fr 90px">
+      <div class="kpi-rep-name"><span style="background:${REP_COLORS[i]}22;color:${REP_COLORS[i]};font-size:10px;padding:2px 5px;border-radius:3px;margin-right:5px">${initials}</span>${rep.split(' ')[0]}</div>
+      <div>
+        <div class="kpi-rep-bar"><div class="kpi-rep-bar-fill" style="width:${pct}%;background:${REP_COLORS[i]}"></div></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${repDeals.length} deals · score ${avgSc.toFixed(0)}%</div>
+      </div>
+      <div class="kpi-rep-val">$${fmtNum(pipeline)}</div>
+    </div>`;
+  });
+  document.getElementById('kpi-reps').innerHTML = repHtml || '<div style="font-size:12px;color:var(--muted)">Sin datos.</div>';
+
+  // ── Deals en Riesgo ──────────────────────────────────────────────────────────
+  const enRiesgo = deals
+    .filter(d => d.stage_change_date && (new Date() - new Date(d.stage_change_date)) / 86400000 > 30)
+    .sort((a,b) => new Date(a.stage_change_date) - new Date(b.stage_change_date))
+    .slice(0, 10);
+
+  if (!enRiesgo.length) {
+    document.getElementById('kpi-riesgo').innerHTML = '<div style="font-size:12px;color:#4ade80;padding:8px 0">✓ Sin deals en riesgo crítico.</div>';
+  } else {
+    document.getElementById('kpi-riesgo').innerHTML = `
+      <table class="kpi-table">
+        <thead><tr>
+          <th>Deal</th><th>Vendedor</th><th>Stage</th><th>Días sin mover</th><th>Score</th><th>Valor</th>
+        </tr></thead>
+        <tbody>${enRiesgo.map(d => {
+          const dias = Math.round((new Date() - new Date(d.stage_change_date)) / 86400000);
+          const cls  = dias > 60 ? 'red' : 'yellow';
+          const val  = d.deal_value_usd ? '$'+fmtNum(parseFloat(d.deal_value_usd)) : '—';
+          return `<tr style="cursor:pointer" onclick="openModal('${esc(d.deal_name)}')">
+            <td><strong>${esc(d.deal_name)}</strong></td>
+            <td style="font-size:11px;color:var(--muted)">${d.assigned_to||'—'}</td>
+            <td style="font-size:11px;color:var(--muted)">${(d.stage||'').replace(/^\d+ · /,'')}</td>
+            <td><span class="kpi-pill ${cls}">${dias}d</span></td>
+            <td style="font-size:11px;font-family:var(--font-mono)">${d.deal_score ? d.deal_score+'%' : '—'}</td>
+            <td style="font-size:11px;font-family:var(--font-mono);color:var(--green)">${val}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+}
+
+// ─── Vista Semana ─────────────────────────────────────────────────────────────
+async function renderSemana() {
+  const agentF = document.getElementById('agent-filter')?.value || '';
+
+  // Traer snapshot y cambios de esta semana
+  let snapshots = [], changes = [];
+  try {
+    const r1 = await dbQuery(`SELECT * FROM weekly_snapshots_v2 ORDER BY week_ending DESC, deals_total DESC`);
+    snapshots = r1 || [];
+    const r2 = await dbQuery(`SELECT * FROM weekly_changes ORDER BY week_ending DESC, vendedor`);
+    changes = r2 || [];
+  } catch(e) {
+    console.error('Error cargando semana:', e);
+    return;
+  }
+
+  if (!snapshots.length) {
+    document.getElementById('semana-grid').innerHTML = '<div class="semana-empty">No hay snapshots todavía. El primer resumen estará disponible el próximo jueves.</div>';
+    return;
+  }
+
+  // Semana más reciente
+  const latestWeek = snapshots[0].week_ending;
+  const weekStr = latestWeek ? new Date(latestWeek).toLocaleDateString('es-MX', {day:'numeric',month:'long',year:'numeric'}) : '';
+  document.getElementById('semana-periodo').textContent = `Semana al ${weekStr}`;
+
+  // Filtrar por agente
+  let snaps = snapshots.filter(s => s.week_ending === latestWeek);
+  let chgs  = changes.filter(c => c.week_ending === latestWeek);
+  if (agentF) {
+    snaps = snaps.filter(s => s.vendedor === agentF);
+    chgs  = chgs.filter(c => c.vendedor === agentF);
+  }
+
+  // Renderizar tarjetas por vendedor
+  const grid = document.getElementById('semana-grid');
+
+  // Si es "todos", agregar tarjeta de totales primero
+  let html = '';
+  if (!agentF && snaps.length > 1) {
+    const total_deals    = snaps.reduce((a,s) => a + (s.deals_total||0), 0);
+    const total_pipeline = snaps.reduce((a,s) => a + parseFloat(s.pipeline_value_usd||0), 0);
+    const total_caliente = snaps.reduce((a,s) => a + (s.temp_caliente||0), 0);
+    const total_tibio    = snaps.reduce((a,s) => a + (s.temp_tibio||0), 0);
+    const total_frio     = snaps.reduce((a,s) => a + (s.temp_frio||0), 0);
+    const avg_score      = snaps.filter(s=>s.avg_score).reduce((a,s) => a + parseFloat(s.avg_score||0), 0) / (snaps.filter(s=>s.avg_score).length||1);
+    html += `<div class="semana-card" style="border-color:var(--green)">
+      <div class="semana-card-name">🏢 Todo el Equipo</div>
+      <div class="semana-stat"><span class="semana-stat-label">Deals activos</span><span class="semana-stat-val">${total_deals}</span></div>
+      <div class="semana-stat"><span class="semana-stat-label">Pipeline</span><span class="semana-stat-val green">$${fmtNum(total_pipeline)}</span></div>
+      <div class="semana-stat"><span class="semana-stat-label">Score promedio</span><span class="semana-stat-val">${avg_score.toFixed(1)}%</span></div>
+      <hr class="semana-divider">
+      <div class="semana-temps">
+        <div class="semana-temp-item">🔥 <strong>${total_caliente}</strong></div>
+        <div class="semana-temp-item">🌡️ <strong>${total_tibio}</strong></div>
+        <div class="semana-temp-item">❄️ <strong>${total_frio}</strong></div>
+      </div>
+    </div>`;
+  }
+
+  // Tarjetas individuales
+  const AGENT_COLORS = {
+    'Jorge H': '#6366f1', 'Alberto Rivera': '#0ea5e9',
+    'Carlos Cruz': '#f59e0b', 'MAURICIO LIRA MORIN': '#10b981',
+    'Horacio Garcia': '#ec4899', 'Alejandro': '#8b5cf6',
+  };
+
+  for (const s of snaps) {
+    const color = AGENT_COLORS[s.vendedor] || '#94a3b8';
+    const initials = s.vendedor.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const pipeline = parseFloat(s.pipeline_value_usd||0);
+    const total = s.deals_total || 1;
+
+    // Barra de stages
+    const stages = [
+      {n: s.deals_discovery||0,  color:'#94a3b8'},
+      {n: s.deals_propuesta||0,  color:'#60a5fa'},
+      {n: s.deals_produccion||0, color:'#818cf8'},
+      {n: s.deals_calidad||0,    color:'#a78bfa'},
+      {n: s.deals_finanzas||0,   color:'#c084fc'},
+      {n: s.deals_tecnica||0,    color:'#e879f9'},
+      {n: s.deals_bc||0,         color:'#f472b6'},
+      {n: s.deals_ejecutiva||0,  color:'#fb923c'},
+    ];
+    const barSegs = stages.map(st =>
+      st.n ? `<div class="semana-stage-seg" style="flex:${st.n};background:${st.color}" title="${st.n} deals"></div>` : ''
+    ).join('');
+
+    html += `<div class="semana-card">
+      <div class="semana-card-name">
+        <span style="background:${color}22;color:${color};font-size:10px;font-weight:800;padding:3px 6px;border-radius:4px">${initials}</span>
+        ${s.vendedor.split(' ')[0]}
+      </div>
+      <div class="semana-stat"><span class="semana-stat-label">Deals activos</span><span class="semana-stat-val">${s.deals_total}</span></div>
+      <div class="semana-stat"><span class="semana-stat-label">Pipeline</span><span class="semana-stat-val green">$${fmtNum(pipeline)}</span></div>
+      <div class="semana-stat"><span class="semana-stat-label">Score promedio</span><span class="semana-stat-val">${parseFloat(s.avg_score||0).toFixed(1)}%</span></div>
+      <div class="semana-stage-bar">${barSegs}</div>
+      <hr class="semana-divider">
+      <div class="semana-temps">
+        <div class="semana-temp-item">🔥 <strong>${s.temp_caliente||0}</strong></div>
+        <div class="semana-temp-item">🌡️ <strong>${s.temp_tibio||0}</strong></div>
+        <div class="semana-temp-item">❄️ <strong>${s.temp_frio||0}</strong></div>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html || '<div class="semana-empty">Sin datos para este agente.</div>';
+
+  // Renderizar cambios
+  const changesList = document.getElementById('semana-changes-list');
+  if (!chgs.length) {
+    changesList.innerHTML = '<div class="semana-empty">Sin cambios de stage esta semana.</div>';
+    return;
+  }
+
+  const AGENT_CFG_LOCAL = {
+    'Jorge H':            { bg:'#6366f122', color:'#818cf8' },
+    'Alberto Rivera':     { bg:'#0ea5e922', color:'#38bdf8' },
+    'Carlos Cruz':        { bg:'#f59e0b22', color:'#fbbf24' },
+    'MAURICIO LIRA MORIN':{ bg:'#10b98122', color:'#34d399' },
+    'Horacio Garcia':     { bg:'#ec489922', color:'#f472b6' },
+    'Alejandro':          { bg:'#8b5cf622', color:'#a78bfa' },
+  };
+
+  changesList.innerHTML = chgs.map(c => {
+    const ag = AGENT_CFG_LOCAL[c.vendedor] || { bg:'var(--surface3)', color:'var(--muted)' };
+    const agInit = (c.vendedor||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="semana-change-item" onclick="openModal('${esc(c.deal_name)}')">
+      <span class="semana-change-agent" style="background:${ag.bg};color:${ag.color}">${agInit}</span>
+      <span class="semana-change-deal">${esc(c.deal_name)}</span>
+      <span class="semana-change-stage">→ ${esc(c.valor_nuevo||'')}</span>
+    </div>`;
+  }).join('');
+}
+
+
+
+// ─── Freeze Analysis ──────────────────────────────────────────────────────────
+let freezeDeal = null;
+const freezeSelections = {};
+
+function openFreezeModal(dealName) {
+  freezeDeal = allDeals.find(d => d.deal_name === dealName);
+  if (!freezeDeal) return;
+
+  // Reset form
+  Object.keys(freezeSelections).forEach(k => delete freezeSelections[k]);
+  document.querySelectorAll('.freeze-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.freeze-decision-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('fz-ultimo_compromiso').value = '';
+  document.getElementById('fz-por_que_congelo').value = '';
+  document.getElementById('fz-que_harias_diferente').value = '';
+  document.getElementById('fz-proxima_accion').value = '';
+  document.getElementById('fz-ultimo_contacto_real').value = '';
+  document.getElementById('fz-proxima_fecha').value = '';
+  document.getElementById('fz-seguir-fields').style.display = 'none';
+
+  document.getElementById('freeze-deal-name').textContent = dealName + ' · ' + (freezeDeal.stage||'').replace(/^\d+ · /,'');
+  document.getElementById('freeze-overlay').style.display = 'flex';
+
+  // Cargar análisis previo si existe
+  loadFreezeAnalysis(dealName);
+}
+
+async function loadFreezeAnalysis(dealName) {
+  try {
+    const res = await fetch(API + '/api/freeze?deal_name=' + encodeURIComponent(dealName), {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    const data = await res.json();
+    if (data.analysis) {
+      const a = data.analysis;
+      if (a.ultimo_compromiso) document.getElementById('fz-ultimo_compromiso').value = a.ultimo_compromiso;
+      if (a.ultimo_contacto_real) document.getElementById('fz-ultimo_contacto_real').value = a.ultimo_contacto_real.slice(0,10);
+      if (a.por_que_congelo) document.getElementById('fz-por_que_congelo').value = a.por_que_congelo;
+      if (a.que_harias_diferente) document.getElementById('fz-que_harias_diferente').value = a.que_harias_diferente;
+      if (a.proxima_accion) document.getElementById('fz-proxima_accion').value = a.proxima_accion;
+      if (a.proxima_fecha) document.getElementById('fz-proxima_fecha').value = a.proxima_fecha.slice(0,10);
+      // Restaurar selecciones
+      const fields = ['compromiso_cumplido','dolor_cuantificado','sabe_quien_decide','dm_sabe_proyecto','contacto_tiene_poder','urgencia_cliente'];
+      fields.forEach(f => {
+        if (a[f]) {
+          freezeSelections[f] = a[f];
+          document.querySelectorAll(`[data-field="${f}"][data-val="${a[f]}"]`).forEach(el => el.classList.add('selected'));
+        }
+      });
+      if (a.decision) {
+        freezeSelections.decision = a.decision;
+        document.querySelectorAll(`[data-decision="${a.decision}"]`).forEach(el => el.classList.add('selected'));
+        if (a.decision === 'seguir') document.getElementById('fz-seguir-fields').style.display = '';
+      }
+    }
+  } catch(e) { /* sin análisis previo */ }
+}
+
+function closeFreezeModal() {
+  document.getElementById('freeze-overlay').style.display = 'none';
+  freezeDeal = null;
+}
+
+function selectFreezeOpt(el) {
+  const field = el.dataset.field;
+  const val   = el.dataset.val;
+  document.querySelectorAll(`[data-field="${field}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  freezeSelections[field] = val;
+}
+
+function selectFreezeDecision(el) {
+  const decision = el.dataset.decision;
+  document.querySelectorAll('.freeze-decision-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  freezeSelections.decision = decision;
+  document.getElementById('fz-seguir-fields').style.display = decision === 'seguir' ? '' : 'none';
+}
+
+async function saveFreezeAnalysis() {
+  if (!freezeDeal) return;
+  if (!freezeSelections.decision) { showToast('Selecciona qué hacer con el deal', 'warn'); return; }
+
+  const payload = {
+    deal_name:             freezeDeal.deal_name,
+    stage_at_freeze:       freezeDeal.stage,
+    ultimo_compromiso:     document.getElementById('fz-ultimo_compromiso').value,
+    compromiso_cumplido:   freezeSelections.compromiso_cumplido || null,
+    ultimo_contacto_real:  document.getElementById('fz-ultimo_contacto_real').value || null,
+    dolor_cuantificado:    freezeSelections.dolor_cuantificado || null,
+    sabe_quien_decide:     freezeSelections.sabe_quien_decide || null,
+    dm_sabe_proyecto:      freezeSelections.dm_sabe_proyecto || null,
+    contacto_tiene_poder:  freezeSelections.contacto_tiene_poder || null,
+    urgencia_cliente:      freezeSelections.urgencia_cliente || null,
+    por_que_congelo:       document.getElementById('fz-por_que_congelo').value,
+    que_harias_diferente:  document.getElementById('fz-que_harias_diferente').value,
+    decision:              freezeSelections.decision,
+    proxima_accion:        document.getElementById('fz-proxima_accion').value || null,
+    proxima_fecha:         document.getElementById('fz-proxima_fecha').value || null,
+  };
+
+  try {
+    const res = await fetch(API + '/api/freeze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    // Si eligió seguir, actualizar next_action y next_followup_date en el deal
+    if (payload.decision === 'seguir' && payload.proxima_accion) {
+      await apiPost('/api/edit_deal', { deal_name: freezeDeal.deal_name, field: 'next_action', value: payload.proxima_accion });
+    }
+    if (payload.decision === 'seguir' && payload.proxima_fecha) {
+      await apiPost('/api/edit_deal', { deal_name: freezeDeal.deal_name, field: 'next_followup_date', value: payload.proxima_fecha });
+    }
+
+    showToast('Análisis guardado ✓', 'ok');
+    closeFreezeModal();
+    await loadDeals();
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ─── Playbook ─────────────────────────────────────────────────────────────────
+const PLAYBOOK = {
+  '1 · Discovery Call': {
+    color: '#94a3b8',
+    items: [
+      { id: 'dc1', text: 'Cliente opera 3 turnos (24/6 o 24/7)' },
+      { id: 'dc2', text: 'Confirmado que le afecta calidad de energía' },
+      { id: 'dc3', text: 'Articuló dolor (máquinas que se detienen, se queman, cuánto le duele)' },
+      { id: 'dc4', text: 'Comprometido a mandar recibo CFE' },
+      { id: 'dc5', text: 'Agenda siguiente reunión confirmada' },
+    ],
+    questions: [
+      '¿Cuántos eventos (paros) tienes al mes/año? ¿Cuánto dura cada uno?',
+      '¿Cuáles son las causas? Cortes, microcortes, variaciones de voltaje...',
+      '¿Qué se detiene o falla primero cuando ocurre?',
+      '¿Cuáles son las principales consecuencias?',
+      '¿Cómo arrancas de nuevo?',
+      '¿Tienen planta de emergencia, paneles o baterías?',
+      '¿Han pensado en soluciones alternas?',
+    ]
+  },
+  '2 · Propuesta Preliminar': {
+    color: '#60a5fa',
+    items: [
+      { id: 'pp1', text: 'Cliente quiere seguir adelante' },
+      { id: 'pp2', text: 'Identificó área(s) a las que puede sumar internamente' },
+      { id: 'pp3', text: 'Agenda reunión de seguimiento siguiente semana confirmada' },
+    ],
+    questions: [
+      'Presentar diferenciador NB-BESS: respaldo + ahorro + calidad de energía',
+      '¿A qué área puede sumar primero? ¿Producción, Calidad o Finanzas?',
+      '¿Quiénes más deberían conocer esta solución?',
+    ]
+  },
+  '3 · Reunión con Producción': {
+    color: '#818cf8',
+    items: [
+      { id: 'rp1', text: 'Información de pérdidas por paros en producción recibida' },
+      { id: 'rp2', text: 'Cuantificado: horas perdidas, piezas no producidas, costo estimado' },
+      { id: 'rp3', text: 'Identificadas causas principales de los paros' },
+    ],
+    questions: [
+      '¿Cuánto tiempo se deja de producir cuando se para?',
+      '¿Cuántas pzas/ton se dejan de producir? ¿Cuánto cuesta?',
+      '¿Cómo recuperan esa producción? ¿Hay horas extra? ¿Cuánto cuestan?',
+      '¿Tienen penalties de clientes? ¿Cuánto?',
+      '¿Qué desperdicio de material se genera? ¿Cuánto cuesta?',
+      '¿Se descalibran máquinas al arrancar de nuevo?',
+    ]
+  },
+  '4 · Reunión con Calidad': {
+    color: '#a78bfa',
+    items: [
+      { id: 'rc1', text: 'Información de pérdidas por scrap y retrabajos recibida' },
+      { id: 'rc2', text: 'Cuantificado costo de equipos dañados por eventos eléctricos' },
+      { id: 'rc3', text: 'Identificadas consecuencias en calidad de producto' },
+    ],
+    questions: [
+      '¿Qué tanto scrap/desperdicio genera un evento eléctrico? ¿Cuánto cuesta?',
+      '¿Qué tan fácil es retrabajar el desperdicio? ¿Cuánto cuesta?',
+      '¿Se dañan equipos o piezas? ¿Cuáles? ¿Cuánto se gasta en reponerlos?',
+      '¿Cuánta producción se pierde a causa de equipos dañados?',
+      '¿Cuáles son las principales consecuencias en calidad de producto?',
+    ]
+  },
+  '5 · Reunión con Finanzas': {
+    color: '#c084fc',
+    items: [
+      { id: 'rf1', text: 'Entienden y valoran la depreciación acelerada (año 1)' },
+      { id: 'rf2', text: 'Nos dieron parámetros de aprobación (TIR mínima, payback máximo, CAPEX/OPEX)' },
+      { id: 'rf3', text: 'Validaron el business case preliminar' },
+      { id: 'rf4', text: 'Confirmado si el proyecto va como CAPEX u OPEX' },
+    ],
+    questions: [
+      '¿Proyectos de este tipo los hacen CAPEX o financiados?',
+      '¿Cuál es su TIR mínima requerida? ¿Payback máximo aceptable?',
+      '¿Conocen el beneficio fiscal de la depreciación acelerada en año 1?',
+      'Validar números de pérdidas que ya tenemos con su perspectiva financiera',
+      '¿Quién autoriza proyectos de esta naturaleza y de este monto?',
+    ]
+  },
+  '6 · Reunión Técnica / Pre-Ingeniería': {
+    color: '#e879f9',
+    items: [
+      { id: 'rt1', text: 'Checklist de ingeniería completado (arquitectura eléctrica, layout, obra civil)' },
+      { id: 'rt2', text: 'Punto de acoplamiento y nivel de tensión definidos' },
+      { id: 'rt3', text: 'Espacio físico confirmado y logística de instalación viable' },
+      { id: 'rt4', text: 'Sin sorpresas técnicas mayores que cambien el costo significativamente' },
+    ],
+    questions: [
+      'Voltaje suministro CFE, voltaje distribución interna',
+      'Número y capacidad de transformadores',
+      'Distancia NB-BESS a punto de interconexión',
+      'Disponibilidad de espacio en tableros MT y BT',
+      'Ventanas para libranza de interconexión (días/horarios)',
+      'Aseguradora y requisitos NFPA/FM Global',
+      '¿Requieren UVIE? ¿Planos actualizados?',
+    ]
+  },
+  '7 · Desarrollo del Business Case': {
+    color: '#f472b6',
+    items: [
+      { id: 'bc1', text: 'Business case documentado con ROI, payback y beneficios fiscales' },
+      { id: 'bc2', text: 'Presentado al champion' },
+      { id: 'bc3', text: 'Champion sumó a los stakeholders relevantes' },
+      { id: 'bc4', text: 'Documento listo para aprobación ejecutiva' },
+    ],
+    questions: [
+      'Consolidar todos los números de pérdidas de reuniones anteriores',
+      'Calcular ROI, payback y TIR con parámetros del cliente',
+      'Incluir depreciación acelerada y beneficios fiscales',
+      '¿Quiénes más debe ver el business case antes del ejecutivo?',
+      '¿El champion puede llevarlo a la presentación ejecutiva?',
+    ]
+  },
+  '8 · Presentación Ejecutiva': {
+    color: '#fb923c',
+    items: [
+      { id: 'pe1', text: 'Junta confirmada con Gerente de Planta o superior' },
+      { id: 'pe2', text: 'Fecha y hora de presentación ejecutiva agendada' },
+      { id: 'pe3', text: 'Asistentes confirmados (DM presente)' },
+    ],
+    questions: [
+      'Presentar el business case a Gerencia/Dirección',
+      'Resolver objeciones finales en sala',
+      'Buscar decisión o next step concreto con fecha',
+    ]
+  },
+};
+
+// Storage de checks en BD via /api/playbook
+async function getPbChecks(dealName) {
+  try {
+    const res = await fetch(API + '/api/playbook?deal_name=' + encodeURIComponent(dealName), {
+      headers: { 'Authorization': 'Bearer ' + getToken() }
+    });
+    const data = await res.json();
+    return data.checks || {};
+  } catch { return {}; }
+}
+
+async function setPbCheck(dealName, itemId, checked) {
+  try {
+    await fetch(API + '/api/playbook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify({ deal_name: dealName, item_id: itemId, checked })
+    });
+  } catch(e) { console.error('Error guardando check:', e); }
+}
+
+function getToken() {
+  try { return JSON.parse(localStorage.getItem('pv_session') || '{}').token || ''; }
+  catch { return ''; }
+}
+
+function switchModalTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.modal-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+async function renderPlaybook(deal) {
+  if (!deal) return;
+  document.getElementById('m-playbook').innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">Cargando...</div>';
+  const currentStage = deal.stage || '1 · Discovery Call';
+  const stageKeys    = Object.keys(PLAYBOOK);
+  const currentIdx   = stageKeys.indexOf(currentStage);
+  const checks       = await getPbChecks(deal.deal_name);
+
+  // Calcular progreso del stage actual
+  const currentPB = PLAYBOOK[currentStage];
+  let doneCount = 0;
+  if (currentPB) {
+    currentPB.items.forEach(item => { if (checks[item.id]) doneCount++; });
+  }
+  const totalItems = currentPB?.items.length || 0;
+  const pct = totalItems ? Math.round(doneCount / totalItems * 100) : 0;
+
+  let html = `<div class="playbook-progress">
+    <div class="playbook-progress-bar">
+      <div class="playbook-progress-fill" style="width:${pct}%"></div>
+    </div>
+    <div class="playbook-progress-txt">${doneCount}/${totalItems} completados</div>
+  </div>`;
+
+  stageKeys.forEach((stageKey, idx) => {
+    const pb        = PLAYBOOK[stageKey];
+    const isCurrent = stageKey === currentStage;
+    const isPast    = idx < currentIdx;
+    const isFuture  = idx > currentIdx;
+    const stageName = stageKey.replace(/^\d+ · /, '');
+
+    html += `<div class="playbook-stage ${isCurrent ? 'current' : ''} ${isFuture ? 'playbook-other' : ''}">
+      <div class="playbook-stage-title">
+        <span class="pb-dot" style="background:${pb.color}"></span>
+        ${isPast ? '✅' : isCurrent ? '▶' : '○'} ${stageName}
+      </div>`;
+
+    if (!isFuture) {
+      pb.items.forEach(item => {
+        const checked = !!checks[item.id];
+        html += `<div class="playbook-item ${checked ? 'done' : ''}">
+          <input type="checkbox" id="pb-${item.id}" ${checked ? 'checked' : ''}
+            onchange="setPbCheck('${esc(deal.deal_name)}', '${item.id}', this.checked); this.closest('.playbook-item').classList.toggle('done', this.checked); updatePbProgress('${esc(deal.deal_name)}')">
+          <label for="pb-${item.id}">${item.text}</label>
+        </div>`;
+      });
+
+      // Preguntas guía colapsables
+      if (pb.questions?.length) {
+        html += `<div class="playbook-questions">
+          <div class="playbook-questions-title" onclick="this.nextElementSibling.classList.toggle('open')">
+            💡 Preguntas guía ▸
+          </div>
+          <div class="playbook-questions-list">
+            ${pb.questions.map(q => `• ${q}`).join('<br>')}
+          </div>
+        </div>`;
+      }
+    }
+
+    html += '</div>';
+  });
+
+  document.getElementById('m-playbook').innerHTML = html;
+}
+
+async function updatePbProgress(dealName) {
+  const deal = allDeals.find(d => d.deal_name === dealName);
+  if (!deal) return;
+  const currentPB = PLAYBOOK[deal.stage];
+  if (!currentPB) return;
+  const checks = await getPbChecks(dealName);
+  const done   = currentPB.items.filter(i => checks[i.id]).length;
+  const total  = currentPB.items.length;
+  const pct    = total ? Math.round(done / total * 100) : 0;
+  const fill   = document.querySelector('.playbook-progress-fill');
+  const txt    = document.querySelector('.playbook-progress-txt');
+  if (fill) fill.style.width = pct + '%';
+  if (txt)  txt.textContent  = `${done}/${total} completados`;
+}
+
+// ─── Mi Día ───────────────────────────────────────────────────────────────────
+let myDayOpen = true;
+
+function toggleMyDay() {
+  myDayOpen = !myDayOpen;
+  document.getElementById('myday-body').style.display = myDayOpen ? '' : 'none';
+  document.getElementById('myday-toggle-icon').textContent = myDayOpen ? '▼' : '▶';
+}
+
+function renderMyDay() {
+  const agentF  = document.getElementById('agent-filter')?.value || '';
+  const todayStr    = today();
+  const tomorrowStr = offsetDate(1);
+  const yesterdayStr = offsetDate(-1);
+
+  let ds = [...allDeals].filter(d =>
+    d.stage !== '0 · Perdido' && d.stage !== '13 · Ganado'
+  );
+
+  // Filtrar por agente si hay uno seleccionado
+  if (agentF) ds = ds.filter(d => d.assigned_to === agentF);
+
+  const nd = d => d.next_followup_date ? String(d.next_followup_date).slice(0,10) : null;
+  const ld = d => d.last_interaction_date ? String(d.last_interaction_date).slice(0,10) : null;
+
+  const late      = ds.filter(d => !nd(d) || nd(d) < todayStr);
+  const todayD    = ds.filter(d => nd(d) === todayStr);
+  const tomorrowD = ds.filter(d => nd(d) === tomorrowStr);
+  const yesterdayD = ds.filter(d => ld(d) === yesterdayStr);
+
+  renderMyDayCol('md-late',      'md-late-count',      late,       5);
+  renderMyDayCol('md-today',     'md-today-count',     todayD,     5);
+  renderMyDayCol('md-tomorrow',  'md-tomorrow-count',  tomorrowD,  5);
+  renderMyDayCol('md-yesterday', 'md-yesterday-count', yesterdayD, 5);
+}
+
+function renderMyDayCol(colId, countId, deals, max) {
+  const el = document.getElementById(colId);
+  const ct = document.getElementById(countId);
+  ct.textContent = deals.length;
+  if (!deals.length) {
+    el.innerHTML = '<div class="myday-empty">Sin actividad</div>';
+    return;
+  }
+  const shown = deals.slice(0, max);
+  const rest  = deals.length - max;
+  el.innerHTML = shown.map(d => {
+    const sub = d.next_action || d.last_interaction_notes?.substring(0, 50) || '';
+    return `<div class="myday-item" onclick="openModal('${esc(d.deal_name)}')">
+      <strong>${esc(d.deal_name)}</strong>
+      ${sub ? `<span class="myday-sub">${esc(sub)}</span>` : ''}
+    </div>`;
+  }).join('') + (rest > 0 ? `<div class="myday-more">+${rest} más</div>` : '');
+}
+
+function offsetDate(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── Vista Tabla ──────────────────────────────────────────────────────────────
+let currentView = 'kanban';
+let sortCol = 'deal_score';
+let sortDir = -1; // -1 = desc, 1 = asc
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('kanban-wrap').style.display = v === 'kanban' ? '' : 'none';
+  document.getElementById('tabla-wrap').style.display  = v === 'tabla'  ? '' : 'none';
+  document.getElementById('semana-wrap').style.display = v === 'semana' ? '' : 'none';
+  document.getElementById('kpi-wrap').style.display    = v === 'kpi'    ? '' : 'none';
+  document.getElementById('btn-kanban').classList.toggle('active', v === 'kanban');
+  document.getElementById('btn-tabla').classList.toggle('active',  v === 'tabla');
+  document.getElementById('btn-semana').classList.toggle('active', v === 'semana');
+  document.getElementById('btn-kpi').classList.toggle('active',    v === 'kpi');
+  if (v === 'tabla')  renderTabla();
+  if (v === 'semana') renderSemana();
+  if (v === 'kpi')    renderKPI();
+}
+
+function sortTable(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = col === 'deal_score' || col === 'deal_value_usd' ? -1 : 1; }
+  renderTabla();
+  // Actualizar íconos
+  document.querySelectorAll('.deals-table th').forEach(th => th.classList.remove('sorted'));
+  event.currentTarget.classList.add('sorted');
+}
+
+function scorePill(score) {
+  if (!score && score !== 0) return '<span class="score-pill score-none">—</span>';
+  const n = parseFloat(score);
+  const cls = n >= 75 ? 'score-high' : n >= 50 ? 'score-mid' : 'score-low';
+  return `<span class="score-pill ${cls}">${n}%</span>`;
+}
+
+function renderTabla() {
+  const agentF = document.getElementById('agent-filter')?.value || '';
+  const viewF  = document.getElementById('view-filter')?.value || 'active';
+  const search = (document.getElementById('search')?.value || '').toLowerCase();
+
+  let ds = [...allDeals];
+  if (agentF) ds = ds.filter(d => d.assigned_to === agentF);
+  if (viewF === 'active')   ds = ds.filter(d => d.stage !== '0 · Perdido' && d.stage !== '13 · Ganado');
+  if (viewF === 'advanced') ds = ds.filter(d => parseInt(d.stage) >= 7);
+  if (search) ds = ds.filter(d => (d.deal_name||'').toLowerCase().includes(search) || (d.company||'').toLowerCase().includes(search));
+
+  // Ordenar
+  ds.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (sortCol === 'deal_score' || sortCol === 'deal_value_usd') {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return (va - vb) * sortDir;
+    }
+    if (sortCol === 'temperatura') {
+      va = tempSort(a.temperatura);
+      vb = tempSort(b.temperatura);
+      return (va - vb) * sortDir;
+    }
+    va = (va || '').toString().toLowerCase();
+    vb = (vb || '').toString().toLowerCase();
+    return va < vb ? -sortDir : va > vb ? sortDir : 0;
+  });
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = ds.map(d => {
+    const agCfg = AGENT_CFG[d.assigned_to];
+    const agBdg = agCfg
+      ? `<span class="tbl-agent" style="background:${agCfg.bg};color:${agCfg.color}">${initials(d.assigned_to)}</span>`
+      : (d.assigned_to || '—');
+    const fu = d.next_followup_date ? normalizeDate(d.next_followup_date) : null;
+    const fuCls = fu ? (fu < today() ? 'overdue' : fu === today() ? 'today' : '') : '';
+    const fuTxt = fu ? fmtDate(fu) : '—';
+    const val = d.deal_value_usd ? '$' + fmtNum(+d.deal_value_usd) : '—';
+    const dots = `<div class="tbl-dots">
+      ${levelDots(d.nivel_contacto_score,'NC')}
+      ${levelDots(d.etapa_proceso_score,'EP')}
+      ${levelDots(d.solidez_bc_score,'BC')}
+      ${levelDots(d.tipo_cliente_score,'TC')}
+    </div>`;
+
+    return `<tr class="clickable" onclick="openModal('${esc(d.deal_name)}')">
+      <td><strong>${esc(d.deal_name)}</strong>${d.company && d.company !== d.deal_name ? `<div class="tbl-stage">${esc(d.company)}</div>` : ''}</td>
+      <td>${tempBadge(d.temperatura)}</td>
+      <td>${scorePill(d.deal_score)}</td>
+      <td><span class="tbl-stage">${esc(d.stage||'')}</span></td>
+      <td class="tbl-val">${val}</td>
+      <td>${agBdg}</td>
+      <td class="card-followup ${fuCls}">${fuTxt}</td>
+      <td>${dots}</td>
+      <td><button class="card-edit" onclick="event.stopPropagation();openModal('${esc(d.deal_name)}')" title="Editar">✏️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+
+function tempBadge(t) {
+  if (!t) return '';
+  if (t === 'Caliente') return '<span class="temp-badge temp-hot" title="Caliente">🔥</span>';
+  if (t === 'Tibio')    return '<span class="temp-badge temp-warm" title="Tibio">🌡️</span>';
+  return '<span class="temp-badge temp-cold" title="Frío">❄️</span>';
+}
+
+function tempSort(t) {
+  if (t === 'Caliente') return 0;
+  if (t === 'Tibio')    return 1;
+  return 2;
+}
+// ─── Keyboard ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') saveDeal();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('search')?.focus();
+  }
+});
+document.getElementById('l-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('l-user').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('l-pass').focus();
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+if (checkStoredAuth()) {
+  showApp();
+} else {
+  document.getElementById('login-screen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
